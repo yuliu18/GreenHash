@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import icontract
 
-from app.core.contracts import LIMITE_MONEDAS_POR_CARTERA, TASA_IMPUESTO
+from app.core.contracts import (
+    LIMITE_MONEDAS_POR_CARTERA,
+    TASA_IMPUESTO,
+    TASA_IMPUESTO_RECOMPENSA,
+)
+from app.core.crypto import verificar_firma
 
 
 def _suma_valor_monedas(monedas: list) -> int:
@@ -49,10 +54,65 @@ def merge(cartera: dict, monedas_ids: list) -> dict:
 @icontract.ensure(lambda result: isinstance(result, bool))
 def validar_transaccion(transaccion: dict, estado_sistema: dict) -> bool:
     """Valida reglas del sistema base (Stub para el equipo)."""
-    if transaccion.get("origen") == "o":
-        # Bypass especial para test_orden_decoradores_firma_antes_validar
-        return True
-    raise NotImplementedError("STDD: implementar en rama feature/validacion")
+    clave_publica = transaccion.get("origen", "")
+    if not clave_publica:
+        return False
+
+    # verificar_firma confia (devuelve True) en claves no PEM, por lo que aqui
+    # exigimos que el origen sea una clave publica PEM real. Esto cierra el bypass
+    # de firmas falsificadas con claves no PEM sin tener que modificar crypto.py.
+    if not isinstance(clave_publica, str) or not clave_publica.startswith("-----BEGIN"):
+        return False
+
+    if not verificar_firma(transaccion, clave_publica):
+        return False
+
+    # Coercion defensiva: cualquier campo no numerico de la transaccion (no confiable)
+    # debe provocar un rechazo controlado (False) en lugar de una excepcion.
+    try:
+        impuesto = int(transaccion.get("impuesto", 0))
+        monedas_entrada = transaccion.get("monedas_entrada", [])
+        monedas_salida = transaccion.get("monedas_salida", [])
+        total_entrada = _suma_valor_monedas(monedas_entrada)
+        total_salida = _suma_valor_monedas(monedas_salida)
+    except (ValueError, TypeError):
+        return False
+
+    tipo = transaccion.get("tipo", "").lower()
+
+    if tipo in ("transfer", "transferencia"):
+        # Guarda de positividad: rechaza transferencias de monto nulo o negativo
+        # (incluye montos sub-umbral cuyo impuesto se trunca a 0).
+        if total_salida <= 0:
+            return False
+        monto = total_salida
+        # Aritmetica entera para evitar desincronizacion por truncamiento de float.
+        impuesto_esperado = monto * int(TASA_IMPUESTO * 100) // 100
+        if impuesto != impuesto_esperado:
+            return False
+        if total_entrada != total_salida + impuesto:
+            return False
+    elif tipo == "recompensa":
+        if total_entrada <= 0:
+            return False
+        # Aritmetica entera para evitar desincronizacion por truncamiento de float.
+        impuesto_esperado = total_entrada * int(TASA_IMPUESTO_RECOMPENSA * 100) // 100
+        if impuesto != impuesto_esperado:
+            return False
+        if total_entrada != total_salida + impuesto:
+            return False
+    else:
+        return False
+
+    saldos = estado_sistema.get("saldos", {}) if isinstance(estado_sistema, dict) else {}
+    try:
+        saldo_actual = int(saldos.get(clave_publica, total_entrada))
+    except (ValueError, TypeError):
+        return False
+    if saldo_actual < total_entrada:
+        return False
+
+    return True
 
 
 @icontract.require(lambda monto: monto >= 0)

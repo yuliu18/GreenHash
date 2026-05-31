@@ -12,7 +12,7 @@ La aplicación consta de **7 páginas/vistas principales** que modelan todo el c
 
 1. **Página de Inicio (Login):** Panel de acceso centralizado. Se ha eliminado cualquier texto redundante para mantener una estética minimalista. Incluye un cuadro informativo con las credenciales de los 6 perfiles seeded de la demo.
 2. **Dashboard / Menú Principal:** Resumen interactivo del estado del reciclador. Muestra de forma clara y en gran tamaño el saldo disponible en GreenCoins (GC), accesos directos a las operaciones y un panel lateral de navegación coherente con los modelos de diseño.
-3. **Página de Transferencias:** Interfaz para enviar GreenCoins entre billeteras (Peer-to-Peer). Requiere ingresar la clave pública de destino y la cantidad, aplicando automáticamente una **tasa de red de validación (impuesto del 5%)**.
+3. **Página de Transferencias:** Interfaz para enviar GreenCoins entre billeteras (Peer-to-Peer). Requiere ingresar la clave pública de destino y la cantidad, aplicando automáticamente una **tasa de red de validación (impuesto del 2%)**.
 4. **Página de Reciclaje:** Simulador interactivo de la báscula física IoT. Permite seleccionar el material y el peso ingresado para calcular dinámicamente y en tiempo real el saldo base, la **tasa de red ecológica (impuesto del 10%)** y el depósito neto.
 5. **Catálogo (Tienda):** Catálogo de recompensas sostenibles donde los usuarios canjean sus GreenCoins acumulados. Incluye modales centrados para ver detalles de los productos (Silla Algas, Mochila Eco, etc.).
 6. **Consulta de Materiales:** Interfaz de búsqueda parametrizada que lista los materiales aceptados por la red y su equivalente de incentivo por Kg.
@@ -52,7 +52,7 @@ El ledger centralizado e inmutable del sistema:
 * `destino` (VARCHAR, Clave pública receptora)
 * `monedas_entrada` (TEXT, Monedas de entrada referenciadas)
 * `monedas_salida` (TEXT, Monedas resultantes del fraccionamiento/salida)
-* `impuesto` (INT, Comisión cobrada por la red: 5% en transferencias, 10% en reciclaje)
+* `impuesto` (INT, Comisión cobrada por la red: 2% en transferencias, 10% en reciclaje)
 * `timestamp` (VARCHAR, Marca de tiempo de la transacción)
 * `firma` (TEXT, Firma criptográfica digital elíptica que asegura no-repudio)
 * `estado` (VARCHAR, Estado de la transacción: 'VALIDA', 'PENDIENTE', 'RECHAZADA')
@@ -93,7 +93,7 @@ El Administrador General tiene privilegios para **Congelar lógicamente** la car
 
 ### 🧾 Política de Comisiones e Impuestos de Red
 El cobro de tasas está integrado de forma transparente e inmutable en el backend:
-* **Transferencias (5%):** El emisor abona `monto + 5%` de impuesto de red, incrementando el saldo del destinatario en `monto` y sumando el `5%` al tesoro central.
+* **Transferencias (2%):** El emisor abona `monto + 2%` de impuesto de red, incrementando el saldo del destinatario en `monto` y sumando el `2%` al tesoro central.
 * **Recompensas de Reciclaje (10%):** Al registrar un depósito (ej. Plástico a 2 GC/Kg), se calcula la recompensa base y se deduce un **10% de Impuesto Ecológico** para el mantenimiento de los terminales físicos autorizados (DSM 5), depositando el saldo neto (`base - 10%`) de forma firmada en su wallet.
 
 ---
