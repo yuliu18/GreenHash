@@ -136,13 +136,24 @@ def dashboard():
                     for r in rows:
                         is_sender = (r["origen"] == clave_publica)
                         try:
-                            campo_monedas = "monedas_salida" if r["tipo"].upper() == "RECOMPENSA" else "monedas_entrada"
+                            # Para recompensas se muestra el neto (monedas_salida).
+                            # Para compras se muestra el costo (monedas_entrada).
+                            # Para transferencias:
+                            # - Si eres emisor (sender), tu costo es monedas_entrada (monto + impuesto).
+                            # - Si eres receptor (receiver), tu ganancia neta es monedas_salida (monto).
+                            tipo_upper = r["tipo"].upper()
+                            if tipo_upper == "RECOMPENSA":
+                                campo_monedas = "monedas_salida"
+                            elif tipo_upper == "COMPRA":
+                                campo_monedas = "monedas_entrada"
+                            else: # TRANSFER
+                                campo_monedas = "monedas_entrada" if is_sender else "monedas_salida"
+                            
                             coins = json.loads(r[campo_monedas])
                             val = sum(float(c.get("valor", 0)) for c in coins) / 100.0
                         except Exception:
                             val = 0.0
 
-                        tipo_upper = r["tipo"].upper()
                         if tipo_upper == "COMPRA":
                             desc = f"Canje: {r['destino']}"
                             amount = -val
@@ -1008,13 +1019,24 @@ def historial():
                 for r in rows:
                     is_sender = (r["origen"] == clave_publica) if clave_publica else False
                     try:
-                        campo_monedas = "monedas_salida" if r["tipo"].upper() == "RECOMPENSA" else "monedas_entrada"
+                        # Para recompensas se muestra el neto (monedas_salida).
+                        # Para compras se muestra el costo (monedas_entrada).
+                        # Para transferencias:
+                        # - Si eres emisor (sender), tu costo es monedas_entrada (monto + impuesto).
+                        # - Si eres receptor (receiver), tu ganancia neta es monedas_salida (monto).
+                        tipo_upper = r["tipo"].upper()
+                        if tipo_upper == "RECOMPENSA":
+                            campo_monedas = "monedas_salida"
+                        elif tipo_upper == "COMPRA":
+                            campo_monedas = "monedas_entrada"
+                        else: # TRANSFER
+                            campo_monedas = "monedas_entrada" if is_sender else "monedas_salida"
+                        
                         coins = json.loads(r[campo_monedas])
                         val = sum(float(c.get("valor", 0)) for c in coins) / 100.0
                     except Exception:
                         val = 0.0
 
-                    tipo_upper = r["tipo"].upper()
                     if tipo_upper == "COMPRA":
                         desc = f"Canje: {r['destino']}"
                         amount = -val
