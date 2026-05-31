@@ -100,9 +100,9 @@ def validar_transaccion(transaccion: dict, estado_sistema: dict) -> bool:
     if tipo in ("transfer", "transferencia"):
         # Guarda de positividad: rechaza transferencias de monto nulo o negativo
         # (incluye montos sub-umbral cuyo impuesto se trunca a 0).
-        if total_salida <= 0:
+        if total_entrada <= 0:
             return False
-        monto = total_salida
+        monto = total_entrada
         # Aritmetica entera para evitar desincronizacion por truncamiento de float.
         impuesto_esperado = monto * int(TASA_IMPUESTO * 100) // 100
         if impuesto != impuesto_esperado:
