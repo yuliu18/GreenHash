@@ -93,6 +93,32 @@ git commit -m "feat: implementar logica de transferencia y split"
 git push origin ramaN/apellidos
 ```
 
+### 4.1. Sincronización Obligatoria Pre-Merge (¡Evitar Conflictos!)
+
+Antes de hacer `git push` o abrir tu PR, es **estrictamente obligatorio** sincronizar tu rama local con los últimos cambios del `main` oficial de GitHub.
+
+#### 🏗️ ¿Por qué es obligatorio? (La metáfora del plano de construcción)
+Imaginá que la rama `main` es el plano maestro de un edificio en construcción. Si vos sacás una copia del plano cuando tiene 10 pisos (tu rama de feature) y te ponés a diseñar la cocina, pero mientras trabajás tu compañero agrega un ascensor al plano maestro (`main`), tu plano estará desactualizado. 
+
+Si intentás mergear tu cocina sin sincronizarte, pueden pasar dos cosas:
+1. **Conflicto de código:** Si tocaron la misma línea, GitHub bloqueará el merge en seco y arrojará un error estresante en la web.
+2. **Falla lógica silenciosa:** El código de tu cocina podría no enterarse de que el ascensor existe, provocando fallos de comportamiento al juntarse.
+
+Sincronizarte localmente te permite **detectar y resolver cualquier conflicto de forma segura en tu computadora**, correr `pytest` para certificar que todo siga verde con los cambios de tus compañeros ya integrados, y asegurar que tu PR sea 100% limpio y seguro de integrar.
+
+#### ⚙️ Comandos obligatorios para sincronizar tu rama:
+```bash
+# 1. Asegúrate de estar parado en tu rama de trabajo
+git checkout ramaN/apellidos
+
+# 2. Descarga los últimos cambios del servidor remoto
+git fetch origin
+
+# 3. Fusiona la rama principal (main) dentro de tu rama local
+git merge origin/main
+```
+*Nota: Si Git te indica que hay conflictos, los resolvés en tu editor de código de forma controlada, grabás el archivo, hacés `git add` del archivo resuelto y completás el merge. Luego, corrés `pytest` para verificar el estado verde final, y recién ahí continuás con el `git push` de tu rama a GitHub.*
+
 Después del push, entrá a GitHub y **creá un Pull Request (PR)** desde tu rama `ramaN/apellidos` apuntando a `main`.
 
 ## 5. Revisión y CI (Integración Continua)
