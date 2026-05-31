@@ -20,10 +20,16 @@ USUARIOS_DEMO = [
 ]
 
 CATALOGO_DEMO = [
-    ("Silla Algas", 2.5),
-    ("Mochila Eco", 1.8),
-    ("Botella Verde", 1.2),
-    ("Maceta Bio", 1.5),
+    # Recompensas de la Tienda
+    ("Silla Algas", 2),
+    ("Mochila Eco", 1),
+    ("Botella Verde", 1),
+    ("Maceta Bio", 1),
+    # Materiales de Reciclaje
+    ("Plástico PET", 2),
+    ("Aluminio / Latas", 5),
+    ("Vidrio", 1),
+    ("Papel y Cartón", 1),
 ]
 
 def seed_database():
