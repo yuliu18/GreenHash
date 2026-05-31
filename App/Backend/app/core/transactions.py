@@ -28,9 +28,23 @@ def _suma_valor_monedas(monedas: list) -> int:
     == _suma_valor_monedas(result.get("monedas_salida", [])) + int(result.get("impuesto", 0))
 )
 def transferencia(origen: dict, destino_clave_publica: str, monto: int) -> dict:
-    """Operacion TRANSFER (Stub para el equipo)."""
-    raise NotImplementedError("STDD: implementar en rama feature/transferencia")
-
+    """Operacion TRANSFER."""
+    saldo = origen.get("saldo", 0)
+    if saldo < monto:
+        raise ValueError(f"Fondos insuficientes: saldo={saldo}, monto requerido={monto}")
+ 
+    impuesto = calcular_impuestos_transferencia(monto)
+    return {
+        "tipo": "TRANSFER",
+        "origen": origen.get("clave_publica", ""),
+        "destino": destino_clave_publica,
+        "monto": monto,
+        "impuesto": impuesto,
+        "estado": "VALIDA",
+        # Conservación de valor: entrada = salida + impuesto
+        "monedas_entrada": [{"valor": monto + impuesto}],
+        "monedas_salida": [{"valor": monto}],
+    }
 
 @icontract.require(lambda cartera, particiones: isinstance(cartera, dict) and isinstance(particiones, list))
 @icontract.require(lambda particiones: all(p > 0 for p in particiones))
