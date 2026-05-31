@@ -200,28 +200,42 @@ def transferir_accion():
         "saldo": int(saldo_actual * 100),
         "nombre_completo": current_user["nombreCompleto"] if current_user else "Usuario"
     }
-    destino = request.form.get("destino", "").strip()
+    destino_input = request.form.get("destino", "").strip()
     try:
         monto = int(float(request.form.get("monto", "0")) * 100)
     except (ValueError, TypeError):
         monto = 0
 
+    # 1. Búsqueda inteligente del destinatario (por Clave Pública, Email o Nombre Completo)
+    destino_clave_publica = ""
+    destino_nombre = ""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT w.clave_publica, u.nombre_completo FROM wallets w "
+                    "JOIN usuarios u ON w.usuario_id = u.id "
+                    "WHERE w.clave_publica = %s OR u.email = %s OR u.nombre_completo = %s",
+                    (destino_input, destino_input, destino_input)
+                )
+                row = cur.fetchone()
+                if row:
+                    destino_clave_publica = row["clave_publica"]
+                    destino_nombre = row["nombre_completo"]
+    except Exception:
+        pass
+
+    if not destino_clave_publica:
+        flash("El destinatario no existe en la red GreenHash (ingresa su Nombre, Email o Clave Pública)", "danger")
+        return redirect(url_for("web.transferir_form"))
+
     @auditar
     @validar
     @firmar
     def _operacion():
-        return transferencia(origen, destino, monto)
+        return transferencia(origen, destino_clave_publica, monto)
 
     try:
-        # 1. Verificar existencia de la billetera destino en la base de datos (mitigacion de perdidas de fondos)
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT id FROM wallets WHERE clave_publica = %s", (destino,))
-                dest_wallet = cur.fetchone()
-                if not dest_wallet:
-                    flash("La billetera de destino no existe en la red GreenHash", "danger")
-                    return redirect(url_for("web.transferir_form"))
-
         transaccion = _operacion()
         
         # 2. Persistencia atómica en Base de Datos MariaDB
@@ -260,7 +274,7 @@ def transferir_accion():
                 )
             conn.commit()
             
-        flash(f"Transferencia registrada con éxito. Se enviaron {monto_transferencia / 100.0:.2f} GC.", "success")
+        flash(f"Transferencia registrada con éxito. Se enviaron {monto_transferencia / 100.0:.2f} GC a {destino_nombre}.", "success")
     except NotImplementedError:
         flash("Funcionalidad no implementada todavia", "warning")
     except ValueError as exc:
