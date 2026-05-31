@@ -13,7 +13,31 @@ from app.db import get_db_connection
 @icontract.ensure(lambda result: isinstance(result, dict))
 def registrar_recompensa_reciclaje(cartera: dict, material: str, catalogo: dict) -> dict:
     """Registra una recompensa por reciclaje (Stub para el equipo)."""
-    raise NotImplementedError("STDD: implementar en rama feature/recompensas")
+def registrar_recompensa_reciclaje(cartera: dict, material: str, catalogo: dict, peso_kg: float = 1.0) -> dict:
+    # 1. Consultar precio por kilo en el catálogo
+    precio_por_kg = catalogo.get(material, 0)
+    
+    # 2. Calcular la recompensa base
+    recompensa_base = peso_kg * precio_por_kg
+    
+    # 3. Calcular impuesto ecológico (10%) y el valor neto
+    impuesto = int(recompensa_base * 0.10)
+    neto_a_depositar = recompensa_base - impuesto
+    
+    # 4. Incrementar el saldo de la cartera
+    cartera["saldo"] = cartera.get("saldo", 0) + neto_a_depositar
+    
+    # 5. Retornar el recibo/bloque transaccional
+    return {
+        "tipo": "Recompensa",
+        "material": material,
+        "peso_kg": peso_kg,
+        "recompensa_bruta": recompensa_base,
+        "impuesto": impuesto,
+        "recompensa_neta": neto_a_depositar,
+        "cartera_destino": cartera.get("clave_publica", "desconocida"),
+        "estado": "VALIDA"
+    }
 
 
 @icontract.require(lambda material: isinstance(material, str) and material.strip() != "")
