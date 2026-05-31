@@ -17,15 +17,20 @@ from app.core.transactions import (
 
 
 def test_transferencia_monto_positivo():
-    origen = {"saldo": 10}
-    with pytest.raises(NotImplementedError):
-        transferencia(origen, "destino", 5)
+    origen = {"saldo": 1000, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = transferencia(origen, "PUB_KEY_STUB_DESTINO", 500)
+    assert isinstance(resultado, dict)
+    assert resultado["tipo"] == "TRANSFER"
+    assert resultado["monto"] == 500
+    assert resultado["impuesto"] == 10
+    assert resultado["monedas_entrada"][0]["valor"] == 500
+    assert resultado["monedas_salida"][0]["valor"] == 490
 
 
 def test_transferencia_no_saldo():
-    origen = {"saldo": 0}
-    with pytest.raises(NotImplementedError):
-        transferencia(origen, "destino", 1)
+    origen = {"saldo": 499, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    with pytest.raises(ValueError):
+        transferencia(origen, "PUB_KEY_STUB_DESTINO", 500)
 
 
 def test_split_conservacion_valor():

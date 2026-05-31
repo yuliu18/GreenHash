@@ -28,12 +28,14 @@ def _suma_valor_monedas(monedas: list) -> int:
     == _suma_valor_monedas(result.get("monedas_salida", [])) + int(result.get("impuesto", 0))
 )
 def transferencia(origen: dict, destino_clave_publica: str, monto: int) -> dict:
-    """Operacion TRANSFER."""
+    """Operacion TRANSFER (Modelo: Receptor paga el impuesto)."""
     saldo = origen.get("saldo", 0)
     if saldo < monto:
         raise ValueError(f"Fondos insuficientes: saldo={saldo}, monto requerido={monto}")
  
     impuesto = calcular_impuestos_transferencia(monto)
+    neto_transferencia = monto - impuesto
+    
     return {
         "tipo": "TRANSFER",
         "origen": origen.get("clave_publica", ""),
@@ -41,9 +43,9 @@ def transferencia(origen: dict, destino_clave_publica: str, monto: int) -> dict:
         "monto": monto,
         "impuesto": impuesto,
         "estado": "VALIDA",
-        # Conservación de valor: entrada = salida + impuesto
-        "monedas_entrada": [{"valor": monto + impuesto}],
-        "monedas_salida": [{"valor": monto}],
+        # Conservación de valor: entrada (monto total) = salida (neto) + impuesto
+        "monedas_entrada": [{"valor": monto}],
+        "monedas_salida": [{"valor": neto_transferencia}],
     }
 
 @icontract.require(lambda cartera, particiones: isinstance(cartera, dict) and isinstance(particiones, list))
@@ -98,9 +100,9 @@ def validar_transaccion(transaccion: dict, estado_sistema: dict) -> bool:
     if tipo in ("transfer", "transferencia"):
         # Guarda de positividad: rechaza transferencias de monto nulo o negativo
         # (incluye montos sub-umbral cuyo impuesto se trunca a 0).
-        if total_salida <= 0:
+        if total_entrada <= 0:
             return False
-        monto = total_salida
+        monto = total_entrada
         # Aritmetica entera para evitar desincronizacion por truncamiento de float.
         impuesto_esperado = monto * int(TASA_IMPUESTO * 100) // 100
         if impuesto != impuesto_esperado:

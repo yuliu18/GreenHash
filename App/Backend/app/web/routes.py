@@ -136,13 +136,24 @@ def dashboard():
                     for r in rows:
                         is_sender = (r["origen"] == clave_publica)
                         try:
-                            campo_monedas = "monedas_salida" if r["tipo"].upper() == "RECOMPENSA" else "monedas_entrada"
+                            # Para recompensas se muestra el neto (monedas_salida).
+                            # Para compras se muestra el costo (monedas_entrada).
+                            # Para transferencias:
+                            # - Si eres emisor (sender), tu costo es monedas_entrada (monto + impuesto).
+                            # - Si eres receptor (receiver), tu ganancia neta es monedas_salida (monto).
+                            tipo_upper = r["tipo"].upper()
+                            if tipo_upper == "RECOMPENSA":
+                                campo_monedas = "monedas_salida"
+                            elif tipo_upper == "COMPRA":
+                                campo_monedas = "monedas_entrada"
+                            else: # TRANSFER
+                                campo_monedas = "monedas_entrada" if is_sender else "monedas_salida"
+                            
                             coins = json.loads(r[campo_monedas])
                             val = sum(float(c.get("valor", 0)) for c in coins) / 100.0
                         except Exception:
                             val = 0.0
 
-                        tipo_upper = r["tipo"].upper()
                         if tipo_upper == "COMPRA":
                             desc = f"Canje: {r['destino']}"
                             amount = -val
@@ -194,27 +205,95 @@ def transferir_accion():
         return redirect(url_for("web.transferir_form"))
 
     current_user, saldo_actual, clave_publica = get_current_user_wallet_details()
+    # Escalamos el saldo a centavos de GreenCoin para el dominio
     origen = {
         "clave_publica": clave_publica,
-        "saldo": saldo_actual,
+        "saldo": int(saldo_actual * 100),
         "nombre_completo": current_user["nombreCompleto"] if current_user else "Usuario"
     }
-    destino = request.form.get("destino", "")
-    monto = int(request.form.get("monto", "0"))
+    destino_input = request.form.get("destino", "").strip()
+    try:
+        monto = int(float(request.form.get("monto", "0")) * 100)
+    except (ValueError, TypeError):
+        monto = 0
+
+    # 1. Búsqueda inteligente del destinatario (por Clave Pública, Email o Nombre Completo)
+    destino_clave_publica = ""
+    destino_nombre = ""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT w.clave_publica, u.nombre_completo FROM wallets w "
+                    "JOIN usuarios u ON w.usuario_id = u.id "
+                    "WHERE w.clave_publica = %s OR u.email = %s OR u.nombre_completo = %s",
+                    (destino_input, destino_input, destino_input)
+                )
+                row = cur.fetchone()
+                if row:
+                    destino_clave_publica = row["clave_publica"]
+                    destino_nombre = row["nombre_completo"]
+    except Exception:
+        pass
+
+    if not destino_clave_publica:
+        flash("El destinatario no existe en la red GreenHash (ingresa su Nombre, Email o Clave Pública)", "danger")
+        return redirect(url_for("web.transferir_form"))
 
     @auditar
     @validar
     @firmar
     def _operacion():
-        return transferencia(origen, destino, monto)
+        return transferencia(origen, destino_clave_publica, monto)
 
     try:
-        _operacion()
-        flash("Transferencia registrada", "success")
+        transaccion = _operacion()
+        
+        # 2. Persistencia atómica en Base de Datos MariaDB
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Debitar del emisor (monto bruto)
+                costo_total = transaccion["monedas_entrada"][0]["valor"]
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo - %s WHERE clave_publica = %s",
+                    (costo_total, transaccion["origen"])
+                )
+                # Acreditar al destinatario (monto neto con impuesto deducido)
+                monto_transferencia = transaccion["monedas_salida"][0]["valor"]
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
+                    (monto_transferencia, transaccion["destino"])
+                )
+                # Registrar en el ledger inmutable
+                import json
+                import datetime
+                timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute(
+                    "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        transaccion["tipo"].upper(),
+                        transaccion["origen"],
+                        transaccion["destino"],
+                        json.dumps(transaccion["monedas_entrada"]),
+                        json.dumps(transaccion["monedas_salida"]),
+                        transaccion["impuesto"],
+                        timestamp_str,
+                        transaccion.get("firma", ""),
+                        transaccion["estado"]
+                    )
+                )
+            conn.commit()
+            
+        monto_bruto_display = float(costo_total) / 100.0
+        monto_neto_display = float(monto_transferencia) / 100.0
+        flash(f"Transferencia de {monto_bruto_display:.2f} GC enviada con éxito. {destino_nombre} recibió {monto_neto_display:.2f} GC (2% de impuesto deducido).", "success")
     except NotImplementedError:
         flash("Funcionalidad no implementada todavia", "warning")
+    except ValueError as exc:
+        flash(f"Error de negocio: {exc}", "warning")
     except icontract.ViolationError as exc:
-        flash(f"Infraccion de contrato: {exc}", "danger")
+        flash(f"Infracción de contrato: {exc}", "danger")
     return redirect(url_for("web.transferir_form"))
 
 
@@ -942,13 +1021,24 @@ def historial():
                 for r in rows:
                     is_sender = (r["origen"] == clave_publica) if clave_publica else False
                     try:
-                        campo_monedas = "monedas_salida" if r["tipo"].upper() == "RECOMPENSA" else "monedas_entrada"
+                        # Para recompensas se muestra el neto (monedas_salida).
+                        # Para compras se muestra el costo (monedas_entrada).
+                        # Para transferencias:
+                        # - Si eres emisor (sender), tu costo es monedas_entrada (monto + impuesto).
+                        # - Si eres receptor (receiver), tu ganancia neta es monedas_salida (monto).
+                        tipo_upper = r["tipo"].upper()
+                        if tipo_upper == "RECOMPENSA":
+                            campo_monedas = "monedas_salida"
+                        elif tipo_upper == "COMPRA":
+                            campo_monedas = "monedas_entrada"
+                        else: # TRANSFER
+                            campo_monedas = "monedas_entrada" if is_sender else "monedas_salida"
+                        
                         coins = json.loads(r[campo_monedas])
                         val = sum(float(c.get("valor", 0)) for c in coins) / 100.0
                     except Exception:
                         val = 0.0
 
-                    tipo_upper = r["tipo"].upper()
                     if tipo_upper == "COMPRA":
                         desc = f"Canje: {r['destino']}"
                         amount = -val
