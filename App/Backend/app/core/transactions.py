@@ -30,10 +30,10 @@ def _suma_valor_monedas(monedas: list) -> int:
 def transferencia(origen: dict, destino_clave_publica: str, monto: int) -> dict:
     """Operacion TRANSFER."""
     saldo = origen.get("saldo", 0)
-    if saldo < monto:
-        raise ValueError(f"Fondos insuficientes: saldo={saldo}, monto requerido={monto}")
- 
     impuesto = calcular_impuestos_transferencia(monto)
+    if saldo < (monto + impuesto):
+        raise ValueError(f"Fondos insuficientes: saldo={saldo}, monto requerido con impuesto={monto + impuesto}")
+ 
     return {
         "tipo": "TRANSFER",
         "origen": origen.get("clave_publica", ""),

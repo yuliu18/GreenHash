@@ -194,13 +194,17 @@ def transferir_accion():
         return redirect(url_for("web.transferir_form"))
 
     current_user, saldo_actual, clave_publica = get_current_user_wallet_details()
+    # Escalamos el saldo a centavos de GreenCoin para el dominio
     origen = {
         "clave_publica": clave_publica,
-        "saldo": saldo_actual,
+        "saldo": int(saldo_actual * 100),
         "nombre_completo": current_user["nombreCompleto"] if current_user else "Usuario"
     }
-    destino = request.form.get("destino", "")
-    monto = int(request.form.get("monto", "0"))
+    destino = request.form.get("destino", "").strip()
+    try:
+        monto = int(float(request.form.get("monto", "0")) * 100)
+    except (ValueError, TypeError):
+        monto = 0
 
     @auditar
     @validar
@@ -209,12 +213,60 @@ def transferir_accion():
         return transferencia(origen, destino, monto)
 
     try:
-        _operacion()
-        flash("Transferencia registrada", "success")
+        # 1. Verificar existencia de la billetera destino en la base de datos (mitigacion de perdidas de fondos)
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM wallets WHERE clave_publica = %s", (destino,))
+                dest_wallet = cur.fetchone()
+                if not dest_wallet:
+                    flash("La billetera de destino no existe en la red GreenHash", "danger")
+                    return redirect(url_for("web.transferir_form"))
+
+        transaccion = _operacion()
+        
+        # 2. Persistencia atómica en Base de Datos MariaDB
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Debitar del emisor (monto + impuesto)
+                costo_total = transaccion["monedas_entrada"][0]["valor"]
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo - %s WHERE clave_publica = %s",
+                    (costo_total, transaccion["origen"])
+                )
+                # Acreditar al destinatario (monto neto)
+                monto_transferencia = transaccion["monedas_salida"][0]["valor"]
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
+                    (monto_transferencia, transaccion["destino"])
+                )
+                # Registrar en el ledger inmutable
+                import json
+                import datetime
+                timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute(
+                    "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        transaccion["tipo"].upper(),
+                        transaccion["origen"],
+                        transaccion["destino"],
+                        json.dumps(transaccion["monedas_entrada"]),
+                        json.dumps(transaccion["monedas_salida"]),
+                        transaccion["impuesto"],
+                        timestamp_str,
+                        transaccion.get("firma", ""),
+                        transaccion["estado"]
+                    )
+                )
+            conn.commit()
+            
+        flash(f"Transferencia registrada con éxito. Se enviaron {monto_transferencia / 100.0:.2f} GC.", "success")
     except NotImplementedError:
         flash("Funcionalidad no implementada todavia", "warning")
+    except ValueError as exc:
+        flash(f"Error de negocio: {exc}", "warning")
     except icontract.ViolationError as exc:
-        flash(f"Infraccion de contrato: {exc}", "danger")
+        flash(f"Infracción de contrato: {exc}", "danger")
     return redirect(url_for("web.transferir_form"))
 
 
