@@ -252,13 +252,13 @@ def transferir_accion():
         # 2. Persistencia atómica en Base de Datos MariaDB
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Debitar del emisor (monto + impuesto)
+                # Debitar del emisor (monto bruto)
                 costo_total = transaccion["monedas_entrada"][0]["valor"]
                 cur.execute(
                     "UPDATE wallets SET saldo = saldo - %s WHERE clave_publica = %s",
                     (costo_total, transaccion["origen"])
                 )
-                # Acreditar al destinatario (monto neto)
+                # Acreditar al destinatario (monto neto con impuesto deducido)
                 monto_transferencia = transaccion["monedas_salida"][0]["valor"]
                 cur.execute(
                     "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
@@ -285,7 +285,9 @@ def transferir_accion():
                 )
             conn.commit()
             
-        flash(f"Transferencia registrada con éxito. Se enviaron {monto_transferencia / 100.0:.2f} GC a {destino_nombre}.", "success")
+        monto_bruto_display = float(costo_total) / 100.0
+        monto_neto_display = float(monto_transferencia) / 100.0
+        flash(f"Transferencia de {monto_bruto_display:.2f} GC enviada con éxito. {destino_nombre} recibió {monto_neto_display:.2f} GC (2% de impuesto deducido).", "success")
     except NotImplementedError:
         flash("Funcionalidad no implementada todavia", "warning")
     except ValueError as exc:

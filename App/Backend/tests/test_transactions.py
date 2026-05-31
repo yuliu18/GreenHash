@@ -23,12 +23,12 @@ def test_transferencia_monto_positivo():
     assert resultado["tipo"] == "TRANSFER"
     assert resultado["monto"] == 500
     assert resultado["impuesto"] == 10
-    assert resultado["monedas_entrada"][0]["valor"] == 510
-    assert resultado["monedas_salida"][0]["valor"] == 500
+    assert resultado["monedas_entrada"][0]["valor"] == 500
+    assert resultado["monedas_salida"][0]["valor"] == 490
 
 
 def test_transferencia_no_saldo():
-    origen = {"saldo": 500, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    origen = {"saldo": 499, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
     with pytest.raises(ValueError):
         transferencia(origen, "PUB_KEY_STUB_DESTINO", 500)
 
