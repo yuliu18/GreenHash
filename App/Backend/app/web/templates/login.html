@@ -1,0 +1,132 @@
+<!-- variables: error:str -->
+{% import "macros.html" as macros %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GreenHash — Iniciar sesión</title>
+    <link rel="preconnect" href="https://rsms.me" />
+    <link href="https://rsms.me/inter/inter.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍃</text></svg>">
+  </head>
+  <body>
+    <div class="login-page">
+      <header class="login-top">
+        {{ macros.logo(size=46, uid='ltop') }}
+        <div class="login-top-right">
+          <button class="icon-btn" title="Tema">{{ macros.icon('sun', size=18) }}</button>
+          <a class="muted-link">¿Necesitas ayuda?</a>
+        </div>
+      </header>
+
+      <main class="login-main">
+        <section class="login-hero">
+          <h1 class="login-h1">Bienvenido a<br /><span class="grad-word">GreenHash</span></h1>
+          <p class="login-sub">La plataforma que impulsa un futuro<br /><strong class="g">sostenible</strong>, juntos.</p>
+          <ul class="login-points">
+            <li class="login-point">
+              <span class="lp-ico">{{ macros.icon('leaf', size=20) }}</span>
+              <span><strong>Impacto real</strong><em>Transforma tus acciones en un impacto positivo para el planeta.</em></span>
+            </li>
+            <li class="login-point">
+              <span class="lp-ico">{{ macros.icon('recycle', size=20) }}</span>
+              <span><strong>Fácil y transparente</strong><em>Gestiona tus GreenCoins y actividades de forma clara y sencilla.</em></span>
+            </li>
+            <li class="login-point">
+              <span class="lp-ico">{{ macros.icon('coin', size=20) }}</span>
+              <span><strong>Recompensas sostenibles</strong><em>Gana recompensas mientras cuidas el medio ambiente.</em></span>
+            </li>
+          </ul>
+        </section>
+
+        <div class="login-illus" aria-hidden="true">
+          <img src="{{ url_for('static', filename='avatars/login-illustration.jpg') }}" alt="" />
+        </div>
+
+        <section class="login-card-wrap">
+          <form class="login-card" method="post" action="{{ url_for('auth.login_usuario') }}">
+            <h2>Iniciar sesión</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                  {% for categoria, mensaje in messages %}
+                    <div class="flash-alert" style="padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; transition: opacity 0.5s ease;
+                                background-color: {% if categoria == 'danger' %}#fee{% elif categoria == 'success' %}#e6f4ea{% elif categoria == 'info' %}#e3f2fd{% else %}#fff4e5{% endif %};
+                                color: {% if categoria == 'danger' %}var(--err){% elif categoria == 'success' %}#1b5e20{% elif categoria == 'info' %}#0d47a1{% else %}#b58105{% endif %};">
+                      {{ mensaje }}
+                    </div>
+                  {% endfor %}
+              {% endif %}
+            {% endwith %}
+            <div style="padding: 12px; border-radius: 8px; background-color: #f4f6f5; border: 1px solid #e2e8f0; font-size: 11px; line-height: 1.5; margin-bottom: 16px; color: #333333;">
+              <strong style="display: block; margin-bottom: 6px; color: #2e7d32; font-size: 12px;">🔑 Credenciales de la DEMO:</strong>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px;">
+                <div>
+                  <span style="font-weight: bold; color: #1b5e20;">👥 Recicladores (10 GC):</span>
+                  <ul style="margin: 2px 0 0 0; padding-left: 12px;">
+                    <li><code>DidactionCoin@green.es</code><br/><span style="color: #666;">(clave: DidactionCoin)</span></li>
+                    <li><code>ECTS@green.es</code><br/><span style="color: #666;">(clave: ECTS)</span></li>
+                    <li><code>CipherCoin@green.es</code><br/><span style="color: #666;">(clave: CipherCoin)</span></li>
+                    <li><code>UNICOIN@green.es</code><br/><span style="color: #666;">(clave: UNICOIN)</span></li>
+                  </ul>
+                </div>
+                <div>
+                  <span style="font-weight: bold; color: #b71c1c;">🛡️ Administradores:</span>
+                  <ul style="margin: 2px 0 0 0; padding-left: 12px;">
+                    <li><code>admin@greenhash.eco</code><br/><span style="color: #666;">(clave: admin)</span></li>
+                    <li><code>profesor@green.es</code><br/><span style="color: #666;">(clave: profesor)</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <label class="field">
+              <span class="field-label">Correo electrónico</span>
+              <span class="input-ico"><span class="ii">{{ macros.icon('email', size=18) }}</span>
+                <input type="email" name="email" placeholder="ejemplo@correo.com" required />
+              </span>
+            </label>
+            <div class="field">
+              <div class="field-row">
+                <span class="field-label">Contraseña</span>
+                <a class="link-g">¿Olvidaste tu contraseña?</a>
+              </div>
+              <span class="input-ico"><span class="ii">{{ macros.icon('lock', size=18) }}</span>
+                <input type="password" name="password" placeholder="••••••••" required />
+              </span>
+            </div>
+            {% if error %}
+              <div class="form-err">{{ error }}</div>
+            {% endif %}
+            <button type="submit" class="btn-primary btn-lg">Iniciar sesión {{ macros.icon('arrowRight', size=18) }}</button>
+            <p class="card-foot">¿No tenés cuenta? <a class="link-g strong" href="{{ url_for('auth.registro_form') }}">Registrate</a></p>
+          </form>
+        </section>
+      </main>
+
+      <footer class="login-foot">
+        {{ macros.logo(size=24, uid='lfoot') }}
+        <nav class="lf-links"><a>Términos y condiciones</a><a>Política de privacidad</a></nav>
+        <div class="lf-social"><span>Síguenos en</span>
+          <a class="soc">{{ macros.icon('linkedin', size=16) }}</a>
+          <a class="soc">{{ macros.icon('instagram', size=16) }}</a>
+          <a class="soc">{{ macros.icon('twitter', size=16) }}</a>
+        </div>
+        <p class="lf-copy">© 2024 GreenHash. Todos los derechos reservados.</p>
+      </footer>
+    </div>
+    <script>
+      (function() {
+        var flashAlerts = document.querySelectorAll('.flash-alert');
+        flashAlerts.forEach(function (alert) {
+          setTimeout(function () {
+            alert.style.opacity = '0';
+            setTimeout(function () {
+              alert.remove();
+            }, 500);
+          }, 4000);
+        });
+      })();
+    </script>
+  </body>
+</html>

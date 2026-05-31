@@ -1,0 +1,11 @@
+# ==============================================================================
+# Dependencias de Desarrollo y Análisis de Seguridad (NO de producción)
+# ==============================================================================
+# Instalar con:  pip install -r requirements-dev.txt
+
+# Incluye las dependencias base de la aplicación
+-r requirements.txt
+
+# Herramienta SAST (Static Application Security Testing) para Python/Flask.
+# Analiza el código fuente en busca de vulnerabilidades de seguridad sin ejecutarlo.
+bandit==1.7.9

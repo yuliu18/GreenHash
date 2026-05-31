@@ -1,0 +1,50 @@
+<!-- variables: current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Fraccionar Moneda (Split)</a></span>
+    </nav>
+    <div class="page-head"><h1>Fraccionar GreenCoins (Split)</h1><p>Divide una moneda de alto valor en fracciones más pequeñas para simplificar tus transacciones.</p></div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><h3>Formulario de Fraccionamiento</h3></div>
+        
+        <form method="post" action="{{ url_for('web.split_accion') }}">
+          <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+          
+          <label class="field">
+            <span class="field-label">ID de la Moneda a Fraccionar</span>
+            <span class="input-ico"><span className="ii">{{ macros.icon('coin', size=18) }}</span>
+              <input type="text" name="moneda_id" placeholder="Ej. GH-COIN-4592" required />
+            </span>
+          </label>
+
+          <label class="field" style="margin-top: 15px;">
+            <span class="field-label">Fracciones a Crear (separadas por comas)</span>
+            <span class="input-ico"><span className="ii">{{ macros.icon('recycle', size=18) }}</span>
+              <input type="text" name="particiones" placeholder="Ej. 3, 5, 2" required />
+            </span>
+            <span class="field-hint">La suma de las partes debe ser igual al valor de la moneda original.</span>
+          </label>
+
+          <button type="submit" class="btn-primary btn-lg full" style="margin-top: 20px;">Ejecutar Fraccionamiento (Split)</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Trazabilidad y Prevención de Doble Gasto</h3></div>
+        <p class="muted" style="line-height: 1.5; font-size: 13.5px; margin-bottom: 16px;">
+          En el protocolo GreenHash, cada moneda es un token criptográfico inmutable. La operación de <b>Split</b> deshabilita de forma definitiva el hash de la moneda original en la base de datos central antes de autorizar la emisión de las fracciones hijas firmadas por la autoridad de certificación.
+        </p>
+        <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; fontSize: 13px; line-height: 1.4;">
+          <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
+          La función de negocio <code>split()</code> en <code>transactions.py</code> es un stub académico. Para que tu equipo haga pasar esta prueba de <b>ROJO a VERDE</b>, deben codificar la lógica que verifique que el saldo de entrada sea conservado y actualizar los registros de forma segura en la base de datos.
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

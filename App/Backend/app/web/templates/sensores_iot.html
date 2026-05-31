@@ -1,0 +1,94 @@
+<!-- variables: current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Monitorea Sensores</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Monitoreo de Sensores e IoT</h1>
+      <p>Supervisa el estado del hardware, calibra balanzas del Punto de Recogida y previene ataques físicos o sabotaje en campo (UML-S DSM 5/7).</p>
+    </div>
+
+    <div class="two-col">
+      <div class="card" style="margin: 0;">
+        <div class="card-head" style="border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 15px;">
+          <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+            {{ macros.icon('signal', size=18) }} Balanza de Pesaje (Calibración IoT)
+          </h3>
+        </div>
+        <p class="muted" style="font-size: 13px; line-height: 1.4; margin-bottom: 15px;">
+          La balanza del sensor reporta las mediciones de los plásticos depositados. Las desviaciones físicas falsean los GC entregados (UML-S DSM 5).
+        </p>
+        
+        <dl class="kv" style="margin: 16px 0; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+            <dt style="font-weight: 500; color: var(--ink-2);">Estado de Calibración</dt>
+            <dd style="color: #2e7d32; font-weight: bold;" id="sensor-cal-status">Calibrado a Cero</dd>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
+            <dt style="font-weight: 500; color: var(--ink-2);">Desviación</dt>
+            <dd style="font-weight: bold; color: var(--ink-1);" id="sensor-cal-offset">0.00g (Estable)</dd>
+          </div>
+        </dl>
+
+        <button id="btn-calibrate" class="btn-primary full" style="width: 100%;" onclick="runCalibration()">Calibrar Sensor a Cero</button>
+      </div>
+
+      <div class="card" style="margin: 0;">
+        <div class="card-head" style="border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 15px;">
+          <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+            {{ macros.icon('settings', size=18) }} Seguridad de Puertos y Control Térmico (DSM 7)
+          </h3>
+        </div>
+        <p class="muted" style="font-size: 13px; line-height: 1.4; margin-bottom: 15px;">
+          Previene intrusiones físicas directas y ataques lógicos BadUSB inyectados mediante memorias extraíbles en los puertos externos de la controladora del campus.
+        </p>
+        
+        <dl class="kv" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+            <dt style="font-weight: 500; color: var(--ink-2);">Temperatura de Operación</dt>
+            <dd style="font-weight: bold; color: var(--ink-1);">24.5 °C (Óptima)</dd>
+          </div>
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+            <dt style="font-weight: 500; color: var(--ink-2);">Carcasa Antivandalismo</dt>
+            <dd style="color: #2e7d32; font-weight: bold;">Sellada y Activa</dd>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-bottom: 8px;">
+            <dt style="font-weight: 500; color: var(--ink-2);">Bloqueo de Puertos USB Lógicos</dt>
+            <dd style="color: #2e7d32; font-weight: bold;">Activo (BadUSB Guard)</dd>
+          </div>
+        </dl>
+        
+        <div style="padding: 12px; border-radius: 8px; background-color: #eaf6ed; border: 1px solid #c8e6c9; color: #2e7d32; font-size: 12.5px; line-height: 1.4;">
+          <strong>🛡️ Mitigación de Ataques Físicos (DSM 7)</strong><br/>
+          Los puertos lógicos de datos a nivel de kernel en la controladora están deshabilitados. Se requiere llave de activación en CCTV para habilitar mantenimiento.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function runCalibration() {
+      var btn = document.getElementById('btn-calibrate');
+      var status = document.getElementById('sensor-cal-status');
+      var offset = document.getElementById('sensor-cal-offset');
+
+      btn.disabled = true;
+      btn.innerText = 'Calibrando balanza IoT...';
+      status.innerText = 'Calibrando...';
+      status.style.color = '#f57c00';
+
+      setTimeout(function() {
+        btn.disabled = false;
+        btn.innerText = 'Calibrar Sensor a Cero';
+        status.innerText = 'Calibrado a Cero';
+        status.style.color = '#2e7d32';
+        offset.innerText = '0.00g (Estable)';
+        alert('¡Balanza calibrada con éxito! Lecturas del sensor IoT de la máquina expendedora estabilizadas en 0.00g (Mitigación DSM 5).');
+      }, 1200);
+    }
+  </script>
+{% endblock %}

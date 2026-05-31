@@ -1,0 +1,111 @@
+<!-- variables: current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a>Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Configuración</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Configuración</h1>
+      <p>Administra tu perfil y preferencias de la cuenta.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><h3>Perfil del Usuario</h3></div>
+        <div class="profile-row" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+          <span class="profile-av" style="display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 50%; background-color: var(--g-100); color: var(--g-700);">
+            {{ macros.icon('user', size=26) }}
+          </span>
+          <div>
+            <strong style="display: block; font-size: 16px; font-weight: 600;">{{ current_user.nombreCompleto if current_user else 'Usuario' }}</strong>
+            <span class="muted" style="font-size: 13px; color: var(--ink-2);">{{ current_user.email if current_user else 'usuario@greenhash.eco' }}</span>
+          </div>
+        </div>
+
+        <form id="config-form" method="post" action="{{ url_for('web.configuracion_accion') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          
+          <label class="field">
+            <span class="field-label">Nombre completo</span>
+            <input type="text" name="nombre" value="{{ current_user.nombreCompleto if current_user else '' }}" placeholder="Nombre completo" required />
+          </label>
+          
+          <label class="field">
+            <span class="field-label">Correo electrónico</span>
+            <input type="email" name="email" value="{{ current_user.email if current_user else '' }}" placeholder="ejemplo@correo.com" required />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Institución</span>
+            <input type="text" value="Campus Universidad" disabled style="background-color: var(--bg-card); cursor: not-allowed;" />
+          </label>
+          
+          <button type="submit" class="btn-primary btn-lg" style="margin-top: 15px;">Guardar cambios</button>
+        </form>
+      </div>
+
+      <div class="stack" style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="card">
+          <div class="card-head"><h3>Notificaciones</h3></div>
+          <div class="toggle-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <span>Correos de actividad</span>
+            <button type="button" class="switch on" style="width: 44px; height: 24px; border-radius: 12px; background-color: var(--g-500); border: 0; position: relative; cursor: pointer;">
+              <span style="display: block; width: 18px; height: 18px; border-radius: 50%; background-color: #fff; position: absolute; top: 3px; right: 3px;"></span>
+            </button>
+          </div>
+          <div class="toggle-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <span>Notificaciones push</span>
+            <button type="button" class="switch on" style="width: 44px; height: 24px; border-radius: 12px; background-color: var(--g-500); border: 0; position: relative; cursor: pointer;">
+              <span style="display: block; width: 18px; height: 18px; border-radius: 50%; background-color: #fff; position: absolute; top: 3px; right: 3px;"></span>
+            </button>
+          </div>
+          <div class="toggle-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
+            <span>Resumen de recompensas</span>
+            <button type="button" class="switch" style="width: 44px; height: 24px; border-radius: 12px; background-color: var(--ink-2); border: 0; position: relative; cursor: pointer; opacity: 0.5;">
+              <span style="display: block; width: 18px; height: 18px; border-radius: 50%; background-color: #fff; position: absolute; top: 3px; left: 3px;"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Preferencias</h3></div>
+          <div class="toggle-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <span>Idioma</span>
+            <div class="seg" style="display: flex; gap: 4px; padding: 2px; background-color: var(--bg-card); border-radius: 6px; border: 1px solid var(--border);">
+              <button type="button" class="on" style="padding: 4px 12px; font-size: 13px; font-weight: 500; border-radius: 4px; border: 0; background-color: var(--g-500); color: #fff; cursor: pointer;">Español</button>
+              <button type="button" style="padding: 4px 12px; font-size: 13px; font-weight: 500; border-radius: 4px; border: 0; background: none; color: var(--ink-1); cursor: pointer;">English</button>
+            </div>
+          </div>
+          <div class="toggle-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 0;">
+            <span>Moneda base</span>
+            <strong style="color: var(--g-700);">GreenCoin (GC)</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.switch').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var knob = btn.querySelector('span');
+        if (btn.classList.contains('on')) {
+          btn.classList.remove('on');
+          btn.style.backgroundColor = 'var(--ink-2)';
+          btn.style.opacity = '0.5';
+          knob.style.right = 'auto';
+          knob.style.left = '3px';
+        } else {
+          btn.classList.add('on');
+          btn.style.backgroundColor = 'var(--g-500)';
+          btn.style.opacity = '1';
+          knob.style.left = 'auto';
+          knob.style.right = '3px';
+        }
+      });
+    });
+  </script>
+{% endblock %}

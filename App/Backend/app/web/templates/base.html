@@ -1,0 +1,179 @@
+<!-- variables: titulo:str, current_user:dict, saldo_actual:int -->
+{% import "macros.html" as macros %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ titulo or "GreenHash" }}</title>
+    <link rel="preconnect" href="https://rsms.me" />
+    <link href="https://rsms.me/inter/inter.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍃</text></svg>">
+  </head>
+  <body>
+    <div class="app nav-open">
+      <aside class="sidebar">
+        <div class="side-brand">{{ macros.logo(size=54, uid='side') }}</div>
+        <nav class="side-nav">
+          {% if session.get('rol') == 'admin' %}
+            <a class="nav-item {% if request.path == url_for('web.dashboard') %}active{% endif %}" href="{{ url_for('web.dashboard') }}">
+              {{ macros.icon('dashboard', size=20) }}<span>Panel Control</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.auditoria') %}active{% endif %}" href="{{ url_for('web.auditoria') }}">
+              {{ macros.icon('lock', size=20) }}<span>Auditoría de Seguridad</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.gestion_catalogo') %}active{% endif %}" href="{{ url_for('web.gestion_catalogo') }}">
+              {{ macros.icon('bag', size=20) }}<span>Gestión Catálogo</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.control_billeteras') %}active{% endif %}" href="{{ url_for('web.control_billeteras') }}">
+              {{ macros.icon('user', size=20) }}<span>Control Billeteras</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.sensores_iot') %}active{% endif %}" href="{{ url_for('web.sensores_iot') }}">
+              {{ macros.icon('signal', size=20) }}<span>Monitoreo Sensores</span>
+            </a>
+            
+            <div style="border-top: 1px solid rgba(0,0,0,0.08); margin: 15px 0 10px; padding-top: 10px; font-size: 11px; font-weight: 700; color: rgba(0,0,0,0.4); text-transform: uppercase; letter-spacing: 0.8px; padding-left: 14px;">
+              Vistas de Pruebas
+            </div>
+            
+            <a class="nav-item {% if request.path == url_for('web.tienda') %}active{% endif %}" href="{{ url_for('web.tienda') }}">
+              {{ macros.icon('bag', size=20) }}<span>Ver Tienda/Catálogo</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.beneficios') %}active{% endif %}" href="{{ url_for('web.beneficios') }}">
+              {{ macros.icon('search', size=20) }}<span>Ver Consulta Mat.</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.historial') %}active{% endif %}" href="{{ url_for('web.historial') }}">
+              {{ macros.icon('history', size=20) }}<span>Ver Historial Act.</span>
+            </a>
+          {% else %}
+            <a class="nav-item {% if request.path == url_for('web.dashboard') %}active{% endif %}" href="{{ url_for('web.dashboard') }}">
+              {{ macros.icon('dashboard', size=20) }}<span>Dashboard</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.billetera') %}active{% endif %}" href="{{ url_for('web.billetera') }}">
+              {{ macros.icon('coin', size=20) }}<span>Mi Billetera</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.transferir_form') %}active{% endif %}" href="{{ url_for('web.transferir_form') }}">
+              {{ macros.icon('send', size=20) }}<span>Transferir</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.reciclar_form') %}active{% endif %}" href="{{ url_for('web.reciclar_form') }}">
+              {{ macros.icon('recycle', size=20) }}<span>Reciclar</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.tienda') %}active{% endif %}" href="{{ url_for('web.tienda') }}">
+              {{ macros.icon('bag', size=20) }}<span>Catálogo</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.beneficios') %}active{% endif %}" href="{{ url_for('web.beneficios') }}">
+              {{ macros.icon('search', size=20) }}<span>Consulta de Materiales</span>
+            </a>
+            <a class="nav-item {% if request.path == url_for('web.historial') %}active{% endif %}" href="{{ url_for('web.historial') }}">
+              {{ macros.icon('history', size=20) }}<span>Historial de Actividad</span>
+            </a>
+          {% endif %}
+          <a class="nav-item {% if request.path == url_for('web.configuracion') %}active{% endif %}" href="{{ url_for('web.configuracion') }}">
+            {{ macros.icon('settings', size=20) }}<span>Configuración</span>
+          </a>
+          <a class="nav-item {% if request.path == url_for('web.ayuda') %}active{% endif %}" href="{{ url_for('web.ayuda') }}">
+            {{ macros.icon('help', size=20) }}<span>Ayuda</span>
+          </a>
+        </nav>
+        <div class="side-foot"><span class="sf-leaf">{{ macros.icon('leaf', size=16) }}</span>Juntos construimos un campus sostenible.</div>
+      </aside>
+      <div class="app-main">
+        <header class="topbar">
+          <button class="icon-btn nav-toggle" title="Mostrar/ocultar menú">{{ macros.icon('menu', size=20) }}</button>
+          <div class="top-spacer"></div>
+          <div class="balance-pill">{{ macros.icon('leaf', size=16) }} Saldo: <strong>{{ saldo_actual or 0 }} GreenCoins</strong></div>
+          <div class="user-menu" style="position: relative;">
+            <button class="user-btn" type="button" aria-expanded="false" aria-controls="userDropdown">
+              <span class="user-av">{{ macros.icon('user', size=18) }}</span>
+              <span class="user-name">{{ current_user.nombreCompleto if current_user else 'Usuario' }}</span>
+              {{ macros.icon('chevDown', size=15) }}
+            </button>
+            <ul class="user-dropdown" id="userDropdown" style="display: none;">
+              <li class="ud-head">
+                <span class="ud-av">{{ macros.icon('user', size=20) }}</span>
+                <div><strong>{{ current_user.nombreCompleto if current_user else 'Usuario' }}</strong><span>{{ current_user.email if current_user else 'usuario@greenhash.eco' }}</span></div>
+              </li>
+              <li onclick="window.location.href='{{ url_for('web.configuracion') }}'" style="cursor: pointer;">{{ macros.icon('user', size=16) }} Mi cuenta</li>
+              <li onclick="window.location.href='{{ url_for('web.configuracion') }}'" style="cursor: pointer;">{{ macros.icon('settings', size=16) }} Configuración</li>
+              <li onclick="window.location.href='{{ url_for('web.ayuda') }}'" style="cursor: pointer;">{{ macros.icon('help', size=16) }} Ayuda</li>
+              <li class="ud-sep" aria-hidden="true"></li>
+              <li class="ud-danger">
+                <form id="logoutForm" method="post" action="{{ url_for('auth.logout_usuario') }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                  <button type="submit" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; padding: 0; font: inherit; cursor: pointer;">
+                    {{ macros.icon('logout', size=16) }} Cerrar sesión
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </header>
+        <main class="main-scroll">
+          {% if billetera_congelada %}
+            <div style="margin: 20px 30px 0; padding: 15px 20px; border-radius: 8px; background-color: #fee; border: 1px solid #ffcdd2; color: #b71c1c; display: flex; align-items: flex-start; gap: 12px; font-size: 14px; line-height: 1.5; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+              <span style="font-size: 20px; line-height: 1;">⚠️</span>
+              <div>
+                <strong style="display: block; margin-bottom: 2px; font-size: 15px;">Billetera Congelada Temporalmente</strong>
+                Tu billetera se encuentra congelada debido a una auditoría de cumplimiento del sistema (DSM 3). 
+                Todas las operaciones salientes (transferencias, compras, fraccionamientos o fusiones) han sido suspendidas temporalmente.
+              </div>
+            </div>
+          {% endif %}
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div style="padding: 20px 30px 0;">
+                {% for categoria, mensaje in messages %}
+                  <div class="flash-alert" style="padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; transition: opacity 0.5s ease;
+                              background-color: {% if categoria == 'danger' %}#fee{% elif categoria == 'success' %}#e6f4ea{% elif categoria == 'info' %}#e3f2fd{% else %}#fff4e5{% endif %};
+                              color: {% if categoria == 'danger' %}var(--neg){% elif categoria == 'success' %}var(--g-800){% elif categoria == 'info' %}#0d47a1{% else %}#663c00{% endif %};">
+                    {{ mensaje }}
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+    
+    <script>
+      (function () {
+        var appRoot = document.querySelector('.app');
+        var navToggle = document.querySelector('.nav-toggle');
+        var userBtn = document.querySelector('.user-btn');
+        var userDropdown = document.getElementById('userDropdown');
+
+        if (navToggle && appRoot) {
+          navToggle.addEventListener('click', function () {
+            appRoot.classList.toggle('nav-open');
+          });
+        }
+
+        document.addEventListener('click', function (event) {
+          if (!userBtn || !userDropdown) return;
+          if (userBtn.contains(event.target)) {
+            userDropdown.style.display =
+              userDropdown.style.display === 'none' || userDropdown.style.display === ''
+                ? 'block'
+                : 'none';
+          } else if (!userDropdown.contains(event.target)) {
+            userDropdown.style.display = 'none';
+          }
+        });
+
+        // Desvanecer alertas flash después de 4 segundos
+        var flashAlerts = document.querySelectorAll('.flash-alert');
+        flashAlerts.forEach(function (alert) {
+          setTimeout(function () {
+            alert.style.opacity = '0';
+            setTimeout(function () {
+              alert.remove();
+            }, 500);
+          }, 4000);
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,179 @@
+<!-- variables: wallets:list, current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Control Billeteras</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Control de Billeteras y Mitigación de Fraudes</h1>
+      <p>Supervisa balances activos de los recicladores, fundea monedas para la demo y congela saldos ante sospechas de desincronización física (UML-S DSM 3).</p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <div class="card-head" style="border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 15px;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          {{ macros.icon('user', size=18) }} Billeteras de Recicladores Registradas
+        </h3>
+      </div>
+      
+      <!-- Panel de alerta local para notificaciones AJAX (CERO recarga) -->
+      <div id="wallets-alert" style="display: none; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 13.5px; font-weight: bold;"></div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Correo Electrónico</th>
+            <th style="max-width: 250px;">Clave Pública (RSA PEM)</th>
+            <th class="ta-r">Saldo</th>
+            <th class="ta-c">Estado</th>
+            <th class="ta-r" style="width: 320px;">Acciones de Demostración</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for w in wallets %}
+            <tr>
+              <td><b>{{ w.usuario }}</b></td>
+              <td class="muted">{{ w.email }}</td>
+              <td class="mono" style="font-size: 11px; color: #666666; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ w.clave_publica }}">
+                {{ w.clave_publica }}
+              </td>
+              <td class="ta-r"><b id="balance-w{{ w.id }}" style="color: #2e7d32; font-size: 13.5px;">{{ w.saldo }} GC</b></td>
+              <td class="ta-c">
+                {% if w.estado == 'CONGELADA' %}
+                  <span id="state-w{{ w.id }}" class="pill bad" style="background-color: #fee; color: #d32f2f;">CONGELADA</span>
+                {% else %}
+                  <span id="state-w{{ w.id }}" class="pill ok">ACTIVA</span>
+                {% endif %}
+              </td>
+              <td class="ta-r">
+                <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; width: 100%;">
+                  
+                  <!-- Fondeo con AJAX (CERO recarga) -->
+                  <form method="post" action="{{ url_for('web.fundear_wallet') }}" onsubmit="ajaxFundearWallet(event)" style="display: inline-flex; gap: 4px; align-items: center; margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+                    <input type="hidden" name="wallet_id" value="{{ w.id }}" />
+                    <input type="hidden" name="username" value="{{ w.usuario }}" />
+                    <input type="number" name="monto" placeholder="+GC" min="1" required style="width: 55px; padding: 4px 6px; font-size: 11px; border-radius: 4px; border: 1px solid #ccc; text-align: center;" />
+                    <button type="submit" class="btn-primary sm" style="padding: 4px 8px; font-size: 11px; background-color: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer; font-weight: 600;">Cargar</button>
+                  </form>
+                  
+                  <!-- Congelamiento con AJAX (CERO recarga) -->
+                  <form method="post" action="{{ url_for('web.congelar_wallet') }}" onsubmit="ajaxCongelarWallet(event)" style="display: inline; margin: 0;">
+                    <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+                    <input type="hidden" name="wallet_id" value="{{ w.id }}" />
+                    <input type="hidden" name="username" value="{{ w.usuario }}" />
+                    <input type="hidden" name="action" id="action-w{{ w.id }}" value="{% if w.estado == 'CONGELADA' %}descongelar{% else %}congelar{% endif %}" />
+                    <button type="submit" id="btn-w{{ w.id }}" class="{% if w.estado == 'CONGELADA' %}btn-primary sm{% else %}btn-ghost sm danger{% endif %}" style="padding: 4px 8px; font-size: 11px; font-weight: 600;">
+                      {% if w.estado == 'CONGELADA' %}Descongelar{% else %}Congelar Cartera{% endif %}
+                    </button>
+                  </form>
+
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6" class="empty">No hay billeteras de recicladores registradas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // AJAX Handler: Carga de GreenCoins Directa
+    function ajaxFundearWallet(event) {
+      event.preventDefault();
+      var form = event.target;
+      var formData = new FormData(form);
+      var actionUrl = form.getAttribute('action');
+      
+      fetch(actionUrl, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        var alertDiv = document.getElementById('wallets-alert');
+        alertDiv.innerText = data.message;
+        alertDiv.style.display = 'block';
+        
+        if (data.status === 'success') {
+          alertDiv.style.backgroundColor = '#e6f4ea';
+          alertDiv.style.color = '#137333';
+          alertDiv.style.border = '1px solid #c8e6c9';
+          
+          // Update user balance cell in the DOM instantly
+          document.getElementById('balance-w' + data.wallet_id).innerText = parseFloat(data.nuevo_saldo).toFixed(1) + ' GC';
+          
+          // Reset numeric input
+          form.querySelector('input[name="monto"]').value = '';
+        } else {
+          alertDiv.style.backgroundColor = '#fdecea';
+          alertDiv.style.color = '#c5221f';
+          alertDiv.style.border = '1px solid #ffcdd2';
+        }
+      })
+      .catch(err => {
+        alert('Error en el fondeo de coins: ' + err);
+      });
+    }
+
+    // AJAX Handler: Congelar/Descongelar Saldo de Cartera
+    function ajaxCongelarWallet(event) {
+      event.preventDefault();
+      var form = event.target;
+      var formData = new FormData(form);
+      var actionUrl = form.getAttribute('action');
+      
+      fetch(actionUrl, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        var alertDiv = document.getElementById('wallets-alert');
+        alertDiv.innerText = data.message;
+        alertDiv.style.display = 'block';
+        
+        var stateSpan = document.getElementById('state-w' + data.wallet_id);
+        var btn = document.getElementById('btn-w' + data.wallet_id);
+        var actionInput = document.getElementById('action-w' + data.wallet_id);
+        
+        if (data.state === 'CONGELADA') {
+          alertDiv.style.backgroundColor = '#fff4e5';
+          alertDiv.style.color = '#b06000';
+          alertDiv.style.border = '1px solid #ffe0b2';
+          
+          stateSpan.innerText = 'CONGELADA';
+          stateSpan.style.backgroundColor = '#fee';
+          stateSpan.style.color = '#d32f2f';
+          stateSpan.className = 'pill bad';
+          
+          actionInput.value = 'descongelar';
+          btn.innerText = 'Descongelar';
+          btn.className = 'btn-primary sm';
+        } else {
+          alertDiv.style.backgroundColor = '#e6f4ea';
+          alertDiv.style.color = '#137333';
+          alertDiv.style.border = '1px solid #c8e6c9';
+          
+          stateSpan.innerText = 'ACTIVA';
+          stateSpan.style.backgroundColor = '#e6f4ea';
+          stateSpan.style.color = 'var(--g-800)';
+          stateSpan.className = 'pill ok';
+          
+          actionInput.value = 'congelar';
+          btn.innerText = 'Congelar Cartera';
+          btn.className = 'btn-ghost sm danger';
+        }
+      })
+      .catch(err => {
+        alert('Error en control de billetera: ' + err);
+      });
+    }
+  </script>
+{% endblock %}

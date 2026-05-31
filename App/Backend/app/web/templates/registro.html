@@ -1,0 +1,83 @@
+<!-- variables: none -->
+{% import "macros.html" as macros %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GreenHash — Registro</title>
+    <link rel="preconnect" href="https://rsms.me" />
+    <link href="https://rsms.me/inter/inter.css" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍃</text></svg>">
+  </head>
+  <body>
+    <div class="login-page">
+      <header class="login-top">
+        {{ macros.logo(size=46, uid='rtop') }}
+      </header>
+
+      <main class="login-main" style="display: flex; justify-content: center; align-items: center;">
+        <section class="login-card-wrap" style="flex: 1; max-width: 500px; margin: 0 auto; width: 100%;">
+          <form class="login-card" method="post" action="{{ url_for('auth.registrar_usuario') }}">
+            <h2>Registro</h2>
+            <p class="card-sub">Creá tu cuenta para comenzar a usar GreenHash.</p>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                  {% for categoria, mensaje in messages %}
+                    <div class="flash-alert" style="padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; transition: opacity 0.5s ease;
+                                background-color: {% if categoria == 'danger' %}#fee{% elif categoria == 'success' %}#e6f4ea{% elif categoria == 'info' %}#e3f2fd{% else %}#fff4e5{% endif %};
+                                color: {% if categoria == 'danger' %}var(--err){% elif categoria == 'success' %}#1b5e20{% elif categoria == 'info' %}#0d47a1{% else %}#b58105{% endif %};">
+                      {{ mensaje }}
+                    </div>
+                  {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <label class="field">
+              <span class="field-label">Nombre completo</span>
+              <span class="input-ico"><span class="ii">{{ macros.icon('user', size=18) }}</span>
+                <input type="text" name="nombre_completo" placeholder="Tu nombre" required />
+              </span>
+            </label>
+            
+            <label class="field">
+              <span class="field-label">Correo electrónico</span>
+              <span class="input-ico"><span class="ii">{{ macros.icon('email', size=18) }}</span>
+                <input type="email" name="email" placeholder="ejemplo@correo.com" required />
+              </span>
+            </label>
+            
+            <label class="field">
+              <span class="field-label">Contraseña</span>
+              <span class="input-ico"><span class="ii">{{ macros.icon('lock', size=18) }}</span>
+                <input type="password" name="password" placeholder="••••••••" required />
+              </span>
+            </label>
+            
+            <button type="submit" class="btn-primary btn-lg" style="margin-top: 10px;">Crear cuenta {{ macros.icon('arrowRight', size=18) }}</button>
+            <p class="card-foot">¿Ya tenés cuenta? <a class="link-g strong" href="{{ url_for('auth.login_form') }}">Iniciá sesión</a></p>
+          </form>
+        </section>
+      </main>
+
+      <footer class="login-foot">
+        <p class="lf-copy">© 2024 GreenHash. Todos los derechos reservados.</p>
+      </footer>
+    </div>
+    <script>
+      (function() {
+        var flashAlerts = document.querySelectorAll('.flash-alert');
+        flashAlerts.forEach(function (alert) {
+          setTimeout(function () {
+            alert.style.opacity = '0';
+            setTimeout(function () {
+              alert.remove();
+            }, 500);
+          }, 4000);
+        });
+      })();
+    </script>
+  </body>
+</html>
