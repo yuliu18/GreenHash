@@ -1,0 +1,285 @@
+<!-- variables: current_user:dict, saldo_actual:int, wallets_list:list -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Gestión de Billeteras</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Mis Billeteras GreenCoin</h1>
+      <p>Administra múltiples identidades digitales en el campus, consulta saldos individuales, y realiza fraccionamientos (Split) o fusiones (Merge) de tus monedas.</p>
+    </div>
+
+    {% if wallets_list %}
+      <!-- Selector de Sub-Módulos (Tabs) para ordenar la UX -->
+      <div class="role-selector" style="display: flex; gap: 8px; margin-bottom: 25px; padding: 4px; background-color: #e9f6ec; border-radius: 8px; max-width: 480px; width: 100%;">
+        <button type="button" onclick="switchTab('info')" id="tab-btn-info" style="flex: 1; padding: 8px 12px; border: none; border-radius: 6px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Mis Carteras ({{ wallets_list|length }})</button>
+        <button type="button" onclick="switchTab('split')" id="tab-btn-split" style="flex: 1; padding: 8px 12px; border: none; border-radius: 6px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Fraccionar (Split)</button>
+        <button type="button" onclick="switchTab('merge')" id="tab-btn-merge" style="flex: 1; padding: 8px 12px; border: none; border-radius: 6px; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Fusionar (Merge)</button>
+      </div>
+    {% endif %}
+
+    <div class="two-col">
+      {% if not wallets_list %}
+        <!-- Estado: No tiene ninguna Billetera -->
+        <div class="card">
+          <div class="card-head"><h3>Crear Nueva Billetera</h3></div>
+          <p class="muted" style="margin-bottom: 20px; line-height: 1.5;">
+            No posees ninguna billetera activa en el sistema GreenHash. Para recibir recompensas por reciclaje y transferir criptomonedas, debes generar una nueva identidad digital (par de claves RSA y dirección pública).
+          </p>
+          
+          <div style="background-color: #f1f8e9; border: 1px solid #d0e7b5; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #33691e;">
+            <strong style="display: block; margin-bottom: 4px;">🎁 Bono de Bienvenida de la DEMO</strong>
+            Al crear tu billetera en este entorno de laboratorio, se te asignarán automáticamente <b>10 GreenCoins (GC)</b> de cortesía para pruebas.
+          </div>
+
+          <form method="post" action="{{ url_for('web.billetera_crear') }}">
+            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+            <button type="submit" class="btn-primary btn-lg full">{{ macros.icon('plus', size=16) }} &nbsp; Generar Par de Claves y Crear Billetera</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Seguridad de la Identidad (DSM 2 & 3)</h3></div>
+          <p class="muted" style="line-height: 1.5; font-size: 13.5px; margin-bottom: 12px;">
+            La creación de una billetera genera un par de claves criptográficas utilizando el estándar <b>RSA de 2048 bits</b>.
+          </p>
+          <ul style="margin: 0 0 16px 16px; padding: 0; font-size: 13.5px; color: #555; line-height: 1.6;">
+            <li>La <b>Clave Pública</b> actúa como tu dirección para recibir depósitos.</li>
+            <li>La <b>Clave Privada</b> (almacenada localmente) firma digitalmente tus transacciones para evitar suplantaciones de identidad.</li>
+          </ul>
+          <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 13px; line-height: 1.4;">
+            <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
+            El método <code>crear_cartera()</code> en <code>wallet.py</code> es un stub académico. Cuando implementes la lógica en la rama <code>feature/wallet</code>, el sistema generará de forma segura el PEM con claves reales y lo persistirá en la base de datos.
+          </div>
+        </div>
+      {% else %}
+        <!-- CONTENIDO TABS -->
+        
+        <!-- TAB 1: MIS CARTERAS (LISTA) -->
+        <div id="tab-content-info" class="tab-content" style="display: contents;">
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            {% for wallet in wallets_list %}
+              <div class="card" style="border-left: 5px solid #2e7d32; position: relative;">
+                <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
+                  <h3>Cartera Activa #{{ wallet.id }}</h3>
+                  <span style="font-size: 12px; font-weight: bold; background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px;">{{ wallet.saldo }} GC</span>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; margin: 15px 0 20px;">
+                  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f9f9f9; padding-bottom: 6px; font-size: 13px;">
+                    <span class="muted">Fecha de Creación:</span>
+                    <span>{{ wallet.creado_en }}</span>
+                  </div>
+                  <div>
+                    <span class="muted" style="display: block; margin-bottom: 5px; font-size: 13px;">Dirección Pública (PEM):</span>
+                    <textarea readonly style="width: 100%; height: 60px; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; border: 1px solid #ddd; background-color: #f9f9f9; resize: none;">{{ wallet.clave_publica }}</textarea>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn-primary" onclick="consultarSaldoEspecifico('{{ wallet.id }}')" style="flex: 1; background-color: #1976d2; border-color: #1976d2; padding: 8px 12px; font-size: 13px;">
+                    {{ macros.icon('eye', size=15) }} &nbsp; Verificar Saldo
+                  </button>
+                  
+                  <form method="post" action="{{ url_for('web.billetera_eliminar') }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta billetera permanente?');" style="flex: 1;">
+                    <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+                    <input type="hidden" name="wallet_id" value="{{ wallet.id }}" />
+                    <button type="submit" class="btn-ghost full" style="color: #c62828; border-color: #c62828; background: transparent; padding: 8px 12px; font-size: 13px;">
+                      {{ macros.icon('X', size=15) }} &nbsp; Destruir Cartera
+                    </button>
+                  </form>
+                </div>
+
+                <div id="consulta-result-{{ wallet.id }}" style="display: none; margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 12.5px;"></div>
+              </div>
+            {% endfor %}
+
+            <!-- Botón para Agregar Más Billeteras -->
+            <div class="card" style="border: 2px dashed #a5d6a7; background: #fafafa; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 20px;">
+              <span style="color: #2e7d32; margin-bottom: 10px;">{{ macros.icon('plus', size=36) }}</span>
+              <h3 style="margin-bottom: 5px; color: #333;">¿Quieres crear otra billetera?</h3>
+              <p class="muted" style="font-size: 13px; max-width: 320px; margin-bottom: 20px;">
+                Puedes tener múltiples billeteras en GreenHash para organizar tus finanzas o tener cuentas separadas por material.
+              </p>
+              <form method="post" action="{{ url_for('web.billetera_crear') }}">
+                <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+                <button type="submit" class="btn-primary" style="background-color: #2e7d32; border-color: #2e7d32; padding: 8px 24px;">Generar Nueva Billetera</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Contratos de Seguridad de Multi-Billeteras</h3></div>
+            <p class="muted" style="line-height: 1.5; font-size: 13.5px; margin-bottom: 15px;">
+              De acuerdo con el modelo <b>UML-S (DSM 3 - GreenCoin)</b>, cada billetera independiente opera con total aislamiento criptográfico:
+            </p>
+            <div style="background-color: #f9f9f9; border-left: 4px solid #2e7d32; padding: 10px; margin-bottom: 15px; font-size: 13px;">
+              <code style="display: block; font-weight: bold; color: #1b5e20; margin-bottom: 4px;">@icontract.require(lambda cartera: cartera.get("saldo") == 0)</code>
+              "Para poder destruir o eliminar cualquiera de tus billeteras, su saldo registrado en base de datos debe ser exactamente de 0 GC."
+            </div>
+            <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 13px; line-height: 1.4;">
+              <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
+              Tanto <code>consultar_saldo()</code> como <code>eliminar_cartera()</code> son stubs. Al consultar el saldo de cualquiera de tus billeteras, se invocará el validador que arrojará el cartel de stub controlado hasta que se complete la implementación.
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: FRACCIONAR (SPLIT) -->
+        <div id="tab-content-split" class="tab-content" style="display: none;">
+          <div class="card">
+            <div class="card-head"><h3>Fraccionar GreenCoins</h3></div>
+            <p class="muted" style="margin-bottom: 20px;">Divide una moneda de alto valor en fracciones más pequeñas para simplificar transferencias exactas.</p>
+            
+            <form method="post" action="{{ url_for('web.split_accion') }}">
+              <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+              
+              <label class="field">
+                <span class="field-label">ID de la Moneda a Fraccionar</span>
+                <span class="input-ico"><span class="ii">{{ macros.icon('coin', size=18) }}</span>
+                  <input type="text" name="moneda_id" placeholder="Ej. GH-COIN-4592" required />
+                </span>
+              </label>
+
+              <label class="field" style="margin-top: 15px;">
+                <span class="field-label">Fracciones a Crear (separadas por comas)</span>
+                <span class="input-ico"><span class="ii">{{ macros.icon('recycle', size=18) }}</span>
+                  <input type="text" name="particiones" placeholder="Ej. 3, 5, 2" required />
+                </span>
+                <span class="field-hint">La suma de las partes debe ser igual al valor de la moneda original.</span>
+              </label>
+
+              <button type="submit" class="btn-primary btn-lg full" style="margin-top: 20px;">Ejecutar Fraccionamiento (Split)</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Trazabilidad y No-Doble Gasto</h3></div>
+            <p class="muted" style="line-height: 1.5; font-size: 13.5px; margin-bottom: 16px;">
+              En el protocolo GreenHash, cada moneda es un token criptográfico inmutable. La operación de <b>Split</b> deshabilita de forma definitiva el hash de la moneda original en la base de datos central antes de autorizar la emisión de las fracciones hijas firmadas por la autoridad de certificación.
+            </p>
+            <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 13px; line-height: 1.4;">
+              <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
+              La función de negocio <code>split()</code> en <code>transactions.py</code> es un stub académico. Para que tu equipo haga pasar esta prueba de <b>ROJO a VERDE</b>, deben codificar la lógica que verifique que el saldo de entrada sea conservado y actualizar los registros de forma segura en la base de datos.
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: FUSIONAR (MERGE) -->
+        <div id="tab-content-merge" class="tab-content" style="display: none;">
+          <div class="card">
+            <div class="card-head"><h3>Fusionar GreenCoins</h3></div>
+            <p class="muted" style="margin-bottom: 20px;">Combina múltiples monedas fraccionadas pequeñas en una sola moneda de mayor valor para consolidar tu billetera.</p>
+            
+            <form method="post" action="{{ url_for('web.merge_accion') }}">
+              <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+              
+              <label class="field">
+                <span class="field-label">IDs de Monedas a Fusionar (separados por comas)</span>
+                <span class="input-ico"><span class="ii">{{ macros.icon('coin', size=18) }}</span>
+                  <input type="text" name="monedas_ids" placeholder="Ej. GH-COIN-0128, GH-COIN-1944" required />
+                </span>
+                <span class="field-hint">Las monedas ingresadas serán consumidas y destruidas para crear un nuevo token consolidado.</span>
+              </label>
+
+              <button type="submit" class="btn-primary btn-lg full" style="margin-top: 20px;">Ejecutar Fusión (Merge)</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Conservación de Valor</h3></div>
+            <p class="muted" style="line-height: 1.5; font-size: 13.5px; margin-bottom: 16px;">
+              La operación de <b>Merge</b> es la contrapartida del Split. Fusiona los balances individuales y emite un nuevo token inmutable. El contrato de post-condición valida de forma estricta la conservación matemática del valor de la billetera.
+            </p>
+            <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 13px; line-height: 1.4;">
+              <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
+              La función de negocio <code>merge()</code> en <code>transactions.py</code> es un stub académico. Para hacer pasar esta prueba de <b>ROJO a VERDE</b> en la rama <code>feature/merge</code>, deben codificar la suma inmutable y la re-emisión firmada por la autoridad central en MariaDB.
+            </div>
+          </div>
+        </div>
+
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    // Sistema de Tabs (Info / Split / Merge)
+    function switchTab(tabId) {
+      const contents = document.querySelectorAll(".tab-content");
+      contents.forEach(el => el.style.display = "none");
+      
+      const activeContent = document.getElementById("tab-content-" + tabId);
+      if (activeContent) {
+        activeContent.style.display = "contents";
+      }
+
+      const buttons = document.querySelectorAll(".role-selector button");
+      buttons.forEach(btn => {
+        btn.style.backgroundColor = "transparent";
+        btn.style.color = "#2e7d32";
+      });
+
+      const activeBtn = document.getElementById("tab-btn-" + tabId);
+      if (activeBtn) {
+        activeBtn.style.backgroundColor = "#2e7d32";
+        activeBtn.style.color = "#ffffff";
+      }
+    }
+
+    // Consulta de saldo específica por Wallet ID
+    function consultarSaldoEspecifico(walletId) {
+      const resultDiv = document.getElementById("consulta-result-" + walletId);
+      resultDiv.style.display = "block";
+      resultDiv.style.backgroundColor = "#e3f2fd";
+      resultDiv.style.border = "1px solid #90caf9";
+      resultDiv.style.color = "#0d47a1";
+      resultDiv.innerHTML = "Consultando balance en los nodos y aplicando contratos...";
+      
+      const formData = new FormData();
+      formData.append("csrf_token", "{{ session.get('csrf_token') or '' }}");
+      formData.append("wallet_id", walletId);
+      
+      fetch("{{ url_for('web.billetera_consultar') }}", {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "success") {
+          resultDiv.style.backgroundColor = "#e8f5e9";
+          resultDiv.style.border = "1px solid #a5d6a7";
+          resultDiv.style.color = "#1b5e20";
+          resultDiv.innerHTML = "<strong>✅ Consulta Exitosa:</strong> " + data.message;
+        } else if (data.status === "warning") {
+          resultDiv.style.backgroundColor = "#fff3cd";
+          resultDiv.style.border = "1px solid #ffeeba";
+          resultDiv.style.color = "#856404";
+          resultDiv.innerHTML = "<strong>⚠️ Estado de Stub Académico:</strong> " + data.message;
+        } else {
+          resultDiv.style.backgroundColor = "#ffebee";
+          resultDiv.style.border = "1px solid #ef9a9a";
+          resultDiv.style.color = "#c62828";
+          resultDiv.innerHTML = "<strong>❌ Error de Contrato:</strong> " + data.message;
+        }
+      })
+      .catch(err => {
+        resultDiv.style.backgroundColor = "#ffebee";
+        resultDiv.style.border = "1px solid #ef9a9a";
+        resultDiv.style.color = "#c62828";
+        resultDiv.innerHTML = "<strong>❌ Error de Conexión:</strong> No se pudo contactar al nodo servidor.";
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam === 'split' || tabParam === 'merge') {
+        switchTab(tabParam);
+      } else {
+        switchTab('info');
+      }
+    });
+  </script>
+{% endblock %}

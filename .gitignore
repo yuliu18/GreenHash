@@ -1,36 +1,95 @@
-# Environments
+# ==============================================================================
+# GreenHash - Git Ignore Rules
+# ==============================================================================
+
+# Custom Project Rules
+AGENTS.md
+**/AGENTS.md
+.atl/
+**/.atl/
+.atl
+.opencode/
+**/.opencode/
+
+# Environments & Secret Keys (OWASP Compliance)
 .env
+*.env
+.env.*
+!.env.example
+!**/.env.example
 venv/
 .venv/
 env/
 ENV/
+ActiveState.venv/
 
-# Python / Flask
+# Python & Flask Caches
 __pycache__/
+**/__pycache__/
 *.py[cod]
+**/*.py[cod]
 *$py.class
+**/*$py.class
 *.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Flask & SQLite Database Local Storage
 instance/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Databases
+.webassets-cache
 *.db
+*.sqlite
 *.sqlite3
 
-# IDEs
-.vscode/
-.idea/
-*.swp
+# Test & Coverage Reports
+.pytest_cache/
+**/.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.hypothesis/
+.coredump
 
-# OS
+# IDEs & Editor Configuration
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# OS Specific Files
 .DS_Store
 .DS_Store?
+**/.DS_Store
 ._*
+**/*._*.un~
 .Spotlight-V100
 .Trashes
 ehthumbs.db

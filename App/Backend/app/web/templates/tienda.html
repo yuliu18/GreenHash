@@ -1,0 +1,69 @@
+<!-- variables: catalogo:list, current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Catálogo</a></span>
+    </nav>
+    <div class="page-head"><h1>Catálogo de Productos</h1><p>Explorá productos sostenibles disponibles en la plataforma.</p></div>
+
+    <div class="prod-grid">
+      {% for item in catalogo %}
+        <div class="card prod-card">
+          <div class="prod-thumb">
+            <img src="{{ url_for('static', filename=item.img) }}" alt="{{ item.name }}" class="prod-photo" />
+          </div>
+          <div class="prod-body">
+            <strong>{{ item.name }}</strong>
+            <p>{{ item.desc }}</p>
+            <div class="prod-price">{{ item.price }} <span>GC</span></div>
+            <button class="btn-primary full" onclick="openDetailsModal('{{ item.id }}', '{{ item.name }}', '{{ item.desc }}', '{{ item.price }}', '{{ url_for('static', filename=item.img) }}')">Ver Detalles</button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="modal-overlay" style="display: none;" onclick="closeDetailsModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <button class="modal-x" onclick="closeDetailsModal()">✕</button>
+        <div class="prod-thumb xl" style="width: calc(100% - 36px); margin: 18px auto 15px; aspect-ratio: 16/10; background-color: #f4f6f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+          <img id="modal-img" src="" alt="" style="max-height: 80%; max-width: 80%; object-fit: contain; display: block; margin: auto; mix-blend-mode: multiply;" />
+        </div>
+        <div class="modal-body">
+          <h3 id="modal-title"></h3>
+          <p id="modal-desc" class="muted" style="margin-top: 8px; line-height: 1.4; font-size: 13.5px;"></p>
+          <ul class="spec" style="list-style: none; padding: 0; margin: 15px 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+            <li style="display: flex; align-items: center; gap: 8px;">{{ macros.icon('recycle', size=16) }} <span>Material reciclado certificado</span></li>
+            <li style="display: flex; align-items: center; gap: 8px;">{{ macros.icon('leaf', size=16) }} <span>Bajo impacto de carbono en campus</span></li>
+          </ul>
+          <div class="modal-foot" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+            <div class="prod-price lg" style="font-size: 20px; font-weight: 700;"><span id="modal-price"></span> <span style="font-size: 12px; color: var(--ink-2); font-weight: 500;">GC</span></div>
+            <form id="redeem-form" method="post" action="{{ url_for('web.comprar_recompensa') }}">
+              <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+              <input type="hidden" name="producto_id" id="modal-product-id" value="" />
+              <button type="submit" class="btn-primary btn-lg">Canjear ahora</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openDetailsModal(id, name, desc, price, img) {
+      document.getElementById('modal-product-id').value = id;
+      document.getElementById('modal-title').innerText = name;
+      document.getElementById('modal-desc').innerText = desc;
+      document.getElementById('modal-price').innerText = price;
+      document.getElementById('modal-img').src = img;
+      document.getElementById('modal-img').alt = name;
+      document.getElementById('detailsModal').style.display = 'grid';
+    }
+    function closeDetailsModal() {
+      document.getElementById('detailsModal').style.display = 'none';
+    }
+  </script>
+{% endblock %}

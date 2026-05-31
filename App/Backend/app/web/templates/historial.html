@@ -1,0 +1,271 @@
+<!-- variables: transacciones:list, current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Historial de Actividad</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Historial de Actividad</h1>
+      <p>Consulta las transacciones inmutables de la plataforma, aplica filtros en tiempo real e inspecciona las firmas y claves criptográficas de cada operación.</p>
+    </div>
+
+    <div class="card">
+      <div class="toolbar" style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; justify-content: space-between;">
+        <div style="display: flex; gap: 10px;">
+          <select id="filtro-tipo" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; background-color: white; font-size: 13.5px; cursor: pointer; color: #333; font-weight: 500;">
+            <option value="todos">Todas las actividades</option>
+            <option value="Recompensa">Recompensas de Reciclaje</option>
+            <option value="Compra">Canjes / Compras</option>
+            <option value="Transferencia">Transferencias</option>
+          </select>
+
+          <input type="text" id="filtro-buscar" placeholder="Buscar por descripción..." style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; font-size: 13.5px; width: 220px;" />
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center; font-size: 13px;">
+          <span style="font-weight: 500; color: #555;">Desde:</span>
+          <input type="date" id="filtro-fecha-desde" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px;" />
+          <span style="font-weight: 500; color: #555;">Hasta:</span>
+          <input type="date" id="filtro-fecha-hasta" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px;" />
+        </div>
+      </div>
+
+      <table class="data-table" id="tabla-transacciones">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th class="ta-r">Monto</th>
+            <th class="ta-r">Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in transacciones %}
+            <tr class="tx-row" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f4f9f4'" onmouseout="this.style.backgroundColor='transparent'"
+                data-id="{{ tx.id }}"
+                data-date="{{ tx.date }}"
+                data-type="{{ tx.type }}"
+                data-desc="{{ tx.desc }}"
+                data-amount="{{ tx.amount }}"
+                data-origen="{{ tx.origen }}"
+                data-destino="{{ tx.destino }}"
+                data-impuesto="{{ tx.impuesto }}"
+                data-firma="{{ tx.firma }}"
+                data-estado="{{ tx.estado }}"
+                data-entradas='{{ tx.monedas_entrada }}'
+                data-salidas='{{ tx.monedas_salida }}'>
+              <td class="muted">{{ tx.date }}</td>
+              <td><span class="pill soft {{ tx.type }}">{{ tx.type }}</span></td>
+              <td>
+                <div style="font-weight: 500; color: #333;">{{ tx.desc }}</div>
+                <span class="muted" style="font-size: 11px; font-family: monospace;">TXID: #{{ tx.id }} (Clic para auditar)</span>
+              </td>
+              <td class="ta-r amt {{ 'neg' if tx.amount < 0 else 'pos' }}">{{ '+' if tx.amount > 0 else '' }}{{ tx.amount }} GC</td>
+              <td class="ta-r"><b>{{ saldo_actual }} GC</b></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">No hay transacciones registradas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Paginador Dinámico Coherente -->
+      <div id="paginador-contenedor" style="margin-top: 20px; display: flex; justify-content: center;">
+        {% if transacciones|length > 0 %}
+          <div class="pager" style="display: flex; gap: 5px;">
+            <button class="pg-btn" disabled style="cursor: not-allowed; opacity: 0.5;">{{ macros.icon('chevLeft', size=15) }}</button>
+            <button class="pg-btn on" style="background-color: #2e7d32; color: white; border-radius: 4px; padding: 6px 12px; border: none; font-weight: bold;">1</button>
+            <button class="pg-btn" disabled style="cursor: not-allowed; opacity: 0.5;">{{ macros.icon('chevRight', size=15) }}</button>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE AUDITORÍA CRIPTOGRÁFICA (UML-S Audit \u0026 Non-Repudiation) -->
+  <div id="auditModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+    <div class="card" style="max-width: 600px; width: 100%; margin: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); border: 1px solid #ddd; max-height: 90vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 15px;">
+        <h3 style="margin: 0; color: #1b5e20; display: flex; align-items: center; gap: 8px;">
+          {{ macros.icon('lock', size=22) }} Bitácora de Auditoría Criptográfica
+        </h3>
+        <button id="closeModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666; font-weight: bold;">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; line-height: 1.5;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Identificador Único (TXID):</span>
+          <strong id="modal-txid"></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Fecha de Registro:</span>
+          <span id="modal-date"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Tipo de Operación:</span>
+          <span id="modal-type" style="font-weight: bold; text-transform: uppercase;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Monto de Transferencia:</span>
+          <strong id="modal-amount" style="color: #2e7d32;"></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Estado de Transacción:</span>
+          <span id="modal-estado" style="color: #1b5e20; font-weight: bold;"></span>
+        </div>
+
+        <div>
+          <span class="muted" style="display: block; margin-bottom: 4px; font-weight: bold;">Cartera Origen:</span>
+          <code id="modal-origen" style="display: block; background: #f5f5f5; padding: 6px 10px; border-radius: 4px; font-size: 12px; word-break: break-all;"></code>
+        </div>
+
+        <div>
+          <span class="muted" style="display: block; margin-bottom: 4px; font-weight: bold;">Cartera Destino:</span>
+          <code id="modal-destino" style="display: block; background: #f5f5f5; padding: 6px 10px; border-radius: 4px; font-size: 12px; word-break: break-all;"></code>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <span class="muted" style="display: block; margin-bottom: 4px; font-weight: bold;">Monedas Consumidas (Entrada):</span>
+            <pre id="modal-entradas" style="background: #fafafa; padding: 6px; border-radius: 4px; font-size: 11px; margin: 0; overflow-x: auto; max-height: 80px;"></pre>
+          </div>
+          <div>
+            <span class="muted" style="display: block; margin-bottom: 4px; font-weight: bold;">Monedas Emitidas (Salida):</span>
+            <pre id="modal-salidas" style="background: #fafafa; padding: 6px; border-radius: 4px; font-size: 11px; margin: 0; overflow-x: auto; max-height: 80px;"></pre>
+          </div>
+        </div>
+
+        <div>
+          <span class="muted" style="display: block; margin-bottom: 4px; font-weight: bold; color: #b71c1c;">Firma Digital Criptográfica (Mitigación No-Repudio):</span>
+          <textarea id="modal-firma" readonly style="width: 100%; height: 75px; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; border: 1px solid #ddd; background-color: #fafafa; resize: none; color: #555;"></textarea>
+        </div>
+      </div>
+
+      <div style="margin-top: 15px; text-align: right;">
+        <button id="closeModalBtn" class="btn-primary" style="background-color: #2e7d32; border-color: #2e7d32; padding: 8px 16px;">Entendido</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // 1. Filtrado dinámico de la tabla en tiempo real (Tipo, Búsqueda y Fecha)
+      const filtroTipo = document.getElementById("filtro-tipo");
+      const filtroBuscar = document.getElementById("filtro-buscar");
+      const filtroDesde = document.getElementById("filtro-fecha-desde");
+      const filtroHasta = document.getElementById("filtro-fecha-hasta");
+      const tablaRows = document.querySelectorAll("#tabla-transacciones tbody tr.tx-row");
+      const paginadorContenedor = document.getElementById("paginador-contenedor");
+
+      function parsearFechaString(str) {
+        // str format: "30/05/2026 12:00"
+        const partes = str.split(" ");
+        const partesFecha = partes[0].split("/");
+        return new Date(partesFecha[2], partesFecha[1] - 1, partesFecha[0]);
+      }
+
+      function filtrarTabla() {
+        const tipoVal = filtroTipo.value;
+        const buscarVal = filtroBuscar.value.toLowerCase().trim();
+        let visibles = 0;
+
+        tablaRows.forEach(row => {
+          const type = row.getAttribute("data-type");
+          const desc = row.getAttribute("data-desc").toLowerCase();
+          const dateStr = row.getAttribute("data-date");
+          const dateObj = parsearFechaString(dateStr);
+          
+          const coincideTipo = (tipoVal === "todos" || type === tipoVal);
+          const coincideBuscar = (buscarVal === "" || desc.includes(buscarVal));
+          
+          let coincideFecha = true;
+          if (filtroDesde.value) {
+            const desdeDate = new Date(filtroDesde.value);
+            desdeDate.setHours(0,0,0,0);
+            coincideFecha = coincideFecha && (dateObj >= desdeDate);
+          }
+          if (filtroHasta.value) {
+            const hastaDate = new Date(filtroHasta.value);
+            hastaDate.setHours(23,59,59,999);
+            coincideFecha = coincideFecha && (dateObj <= hastaDate);
+          }
+
+          if (coincideTipo && coincideBuscar && coincideFecha) {
+            row.style.display = "";
+            visibles++;
+          } else {
+            row.style.display = "none";
+          }
+        });
+
+        // Actualizar paginador dinámicamente según resultados visibles
+        if (visibles === 0) {
+          paginadorContenedor.style.display = "none";
+        } else {
+          paginadorContenedor.style.display = "flex";
+        }
+      }
+
+      filtroTipo.addEventListener("change", filtrarTabla);
+      filtroBuscar.addEventListener("input", filtrarTabla);
+      filtroDesde.addEventListener("change", filtrarTabla);
+      filtroHasta.addEventListener("change", filtrarTabla);
+
+      // 2. Lógica del modal de auditoría
+      const modal = document.getElementById("auditModal");
+      const closeModal = document.getElementById("closeModal");
+      const closeModalBtn = document.getElementById("closeModalBtn");
+
+      // Cargar datos en el modal al hacer clic en una fila
+      tablaRows.forEach(row => {
+        row.addEventListener("click", function() {
+          document.getElementById("modal-txid").textContent = "#" + this.getAttribute("data-id");
+          document.getElementById("modal-date").textContent = this.getAttribute("data-date");
+          document.getElementById("modal-type").textContent = this.getAttribute("data-type");
+          
+          const amt = parseFloat(this.getAttribute("data-amount"));
+          const amountSpan = document.getElementById("modal-amount");
+          amountSpan.textContent = (amt > 0 ? "+" : "") + amt + " GC";
+          amountSpan.className = amt >= 0 ? "pos" : "neg";
+          
+          document.getElementById("modal-estado").textContent = this.getAttribute("data-estado");
+          document.getElementById("modal-origen").textContent = this.getAttribute("data-origen");
+          document.getElementById("modal-destino").textContent = this.getAttribute("data-destino");
+          document.getElementById("modal-firma").value = this.getAttribute("data-firma");
+          
+          // Formatear JSON de entrada/salida de forma bonita
+          try {
+            const ent = JSON.parse(this.getAttribute("data-entradas"));
+            document.getElementById("modal-entradas").textContent = JSON.stringify(ent, null, 2);
+          } catch(e) {
+            document.getElementById("modal-entradas").textContent = this.getAttribute("data-entradas");
+          }
+          
+          try {
+            const sal = JSON.parse(this.getAttribute("data-salidas"));
+            document.getElementById("modal-salidas").textContent = JSON.stringify(sal, null, 2);
+          } catch(e) {
+            document.getElementById("modal-salidas").textContent = this.getAttribute("data-salidas");
+          }
+
+          modal.style.display = "flex";
+        });
+      });
+
+      // Cerrar modal
+      function ocultarModal() {
+        modal.style.display = "none";
+      }
+
+      closeModal.addEventListener("click", ocultarModal);
+      closeModalBtn.addEventListener("click", ocultarModal);
+      modal.addEventListener("click", function(e) {
+        if (e.target === modal) ocultarModal();
+      });
+    });
+  </script>
+{% endblock %}

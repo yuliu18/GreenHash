@@ -1,0 +1,154 @@
+<!-- variables: current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Reciclar</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Sistema de Reciclaje</h1>
+      <p>Simulador del punto de recogida autorizado. Seleccioná el material y pesaje para calcular tu recompensa en GreenCoins.</p>
+    </div>
+
+    <div class="recycle-panel" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+      <!-- Columna Izquierda: Formulario e Integración con el Core -->
+      <div class="recycle-col" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <h3 class="rc-title" style="margin-top: 0; color: #2e7d32; display: flex; align-items: center; gap: 8px;">
+          {{ macros.icon('recycle', size=20) }} Registrar Depósito
+        </h3>
+        
+        <form method="post" action="{{ url_for('web.reciclar_accion') }}" id="form-reciclaje" style="margin-top: 15px;">
+          <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}" />
+          
+          <label class="field" style="display: block; margin-bottom: 15px;">
+            <span class="field-label" style="font-weight: 600; display: block; margin-bottom: 6px;">Material Reciclable</span>
+            <span class="input-ico" style="display: block; position: relative;">
+              <select name="material" id="select-material" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 14px; background: white;">
+                <option value="Plástico PET" data-precio="2">Plástico PET (Recompensa: 2 GC/Kg)</option>
+                <option value="Aluminio / Latas" data-precio="5">Aluminio / Latas (Recompensa: 5 GC/Kg)</option>
+                <option value="Vidrio" data-precio="1">Vidrio (Recompensa: 1 GC/Kg)</option>
+                <option value="Papel y Cartón" data-precio="1.5">Papel y Cartón (Recompensa: 1.5 GC/Kg)</option>
+              </select>
+            </span>
+          </label>
+
+          <label class="field" style="display: block; margin-bottom: 20px;">
+            <span class="field-label" style="font-weight: 600; display: block; margin-bottom: 6px;">Peso de la Entrega (Kg)</span>
+            <span class="input-ico" style="display: block; position: relative;">
+              <input type="number" name="peso" id="input-peso" value="1.0" min="0.1" step="0.1" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 14px;" />
+            </span>
+          </label>
+
+          <!-- 📊 Cuadro de Cálculo y Explicación del Impuesto -->
+          <div style="background-color: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; font-size: 13px; margin-bottom: 20px;">
+            <strong style="color: #475569; display: block; margin-bottom: 8px; font-size: 14px;">🧾 Desglose de Operación (Simulada):</strong>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #64748b;">
+              <span>Recompensa base:</span>
+              <span id="calculo-base">2.00 GC</span>
+            </div>
+            
+            <!-- 🛡️ Explicación del Impuesto del Sistema / Red -->
+            <div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid #e2e8f0; color: #b91c1c; font-weight: 600;">
+              <span style="display: flex; align-items: center; gap: 4px;">
+                Tasa de Red / Impuesto Ecológico (10%):
+                <span title="Este impuesto del 10% financia el mantenimiento y disponibilidad física de los puntos de recogida autorizados." style="cursor: help; background: #ef4444; color: white; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 9px;">?</span>
+              </span>
+              <span id="calculo-impuesto">-0.20 GC</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 15px; font-weight: bold; color: #166534;">
+              <span>Depósito Neto Estimado:</span>
+              <span id="calculo-neto">1.80 GC</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px; display: block; width: 100%;">
+            <button type="submit" class="btn-primary" style="width: 100% !important; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;">
+              {{ macros.icon('recycle', size=16) }} Reclamar Recompensa
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Columna Derecha: Sensor de Báscula y Estado IoT -->
+      <div class="recycle-col" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div>
+          <h3 class="rc-title" style="margin-top: 0; color: #475569;">Estado de Conexión Báscula IoT</h3>
+          <ul class="conn-list" style="list-style: none; padding: 0; margin: 15px 0 0 0; line-height: 1.8; font-size: 13px; color: #475569;">
+            <li style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span class="dot live" style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite;"></span>
+              Conectado a la máquina física
+            </li>
+            <li><em>ID del Dispositivo:</em> <b>GH-RC-001</b></li>
+            <li><em>Ubicación:</em> <b>Campus Universidad</b></li>
+            <li><em>Estado del Sensor:</em> <b style="color: #15803d;">Listo para pesar</b></li>
+          </ul>
+        </div>
+
+        <div class="recycle-col machine-col" style="display: flex; justify-content: center; align-items: center; padding: 20px 0;">
+          <div class="machine" aria-hidden="true" style="text-align: center;">
+            <svg viewBox="0 0 240 220" width="140">
+              <ellipse cx="116" cy="206" rx="84" ry="8" fill="#E6F1E9"/>
+              <path d="M170 56 L188 42 L188 182 L170 196 Z" fill="#3E9A50"/>
+              <path d="M52 56 L70 42 L188 42 L170 56 Z" fill="#4AA45C"/>
+              <rect x="52" y="56" width="118" height="140" rx="7" fill="#56B266"/>
+              <rect x="52" y="56" width="118" height="140" rx="7" fill="none" stroke="#3E9A50" stroke-width="3"/>
+              <rect x="52" y="56" width="118" height="15" rx="6" fill="#48A65A"/>
+              <rect x="62" y="82" width="46" height="96" rx="6" fill="#368A49"/>
+              <rect x="114" y="82" width="46" height="96" rx="6" fill="#368A49"/>
+              <rect x="62" y="196" width="14" height="14" rx="3" fill="#3E9A50"/>
+              <rect x="146" y="196" width="14" height="14" rx="3" fill="#3E9A50"/>
+            </svg>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: #94a3b8; line-height: 1.4; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+          🛡️ <b>Cumplimiento de DSM 5 (Punto de Recogida):</b> Todas las mediciones e ingresos están firmados criptográficamente desde la interfaz del terminal IoT, previniendo manipulaciones maliciosas de saldo fuera del punto físico.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+  </style>
+
+  <!-- 🧮 Script de Cálculo Dinámico en Tiempo Real -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const selectMaterial = document.getElementById("select-material");
+      const inputPeso = document.getElementById("input-peso");
+      
+      const calculoBase = document.getElementById("calculo-base");
+      const calculoImpuesto = document.getElementById("calculo-impuesto");
+      const calculoNeto = document.getElementById("calculo-neto");
+
+      function actualizarValores() {
+        const optionSeleccionada = selectMaterial.options[selectMaterial.selectedIndex];
+        const precioPorKg = parseFloat(optionSeleccionada.getAttribute("data-precio"));
+        const peso = parseFloat(inputPeso.value) || 0;
+
+        const base = peso * precioPorKg;
+        const impuesto = base * 0.10; // Tasa del 10%
+        const neto = base - impuesto;
+
+        calculoBase.textContent = base.toFixed(2) + " GC";
+        calculoImpuesto.textContent = "-" + impuesto.toFixed(2) + " GC";
+        calculoNeto.textContent = neto.toFixed(2) + " GC";
+      }
+
+      selectMaterial.addEventListener("change", actualizarValores);
+      inputPeso.addEventListener("input", actualizarValores);
+
+      // Primera ejecución
+      actualizarValores();
+    });
+  </script>
+{% endblock %}

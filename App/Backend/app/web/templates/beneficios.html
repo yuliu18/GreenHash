@@ -1,0 +1,64 @@
+<!-- variables: materiales:list, search_query:str, current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Consulta de Materiales</a></span>
+    </nav>
+    <div class="page-head"><h1>Consulta de Materiales</h1><p>Buscá materiales aceptados y sus recompensas.</p></div>
+
+    <div class="card">
+      <form method="get" action="{{ url_for('web.beneficios') }}" class="toolbar" style="margin-bottom: 20px;">
+        <span class="input-ico grow">
+          <span class="ii">{{ macros.icon('search', size=18) }}</span>
+          <input name="q" placeholder="Buscar materiales…" value="{{ search_query or '' }}" autocomplete="off" style="width: 100%;" />
+        </span>
+        <button type="submit" class="btn-primary" style="padding: 8px 16px;">Buscar</button>
+        {% if search_query %}
+          <a href="{{ url_for('web.beneficios') }}" class="btn-ghost" style="padding: 8px 12px; display: inline-flex; align-items: center;">Limpiar</a>
+        {% endif %}
+      </form>
+      
+      <table class="data-table">
+        <thead><tr><th>Material</th><th>Categoría</th><th class="ta-r">Recompensa (GC)</th><th class="ta-r">Estado</th></tr></thead>
+        <tbody>
+          {% for item in materiales %}
+            <tr>
+              <td>
+                <span class="mat-ico">
+                  {% if 'Aluminio' in item.material or 'Metal' in item.material %}
+                    {{ macros.icon('coin', size=16) }}
+                  {% else %}
+                    {{ macros.icon('package', size=16) }}
+                  {% endif %}
+                </span>
+                <b>{{ item.material }}</b>
+              </td>
+              <td class="muted">
+                {% if 'Aluminio' in item.material or 'Metal' in item.material %}
+                  Metal
+                {% elif 'Vidrio' in item.material %}
+                  Vidrio
+                {% elif 'Papel' in item.material or 'Cartón' in item.material %}
+                  Papel/Cartón
+                {% else %}
+                  Plástico
+                {% endif %}
+              </td>
+              <td class="ta-r"><b class="pos">+{{ item.precio }} GC</b></td>
+              <td class="ta-r"><span class="pill ok">Aceptado</span></td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="4" class="empty" style="text-align: center; padding: 30px; color: var(--ink-3);">
+                No se encontraron materiales que coincidan con la búsqueda.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

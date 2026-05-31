@@ -1,0 +1,127 @@
+<!-- variables: current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a>Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Ayuda</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Centro de Ayuda</h1>
+      <p>Encuentra respuestas a las preguntas más frecuentes.</p>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><h3>Preguntas frecuentes</h3></div>
+        <ul class="faq" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px;">
+          
+          <li class="faq-item" style="border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background-color: var(--bg-card);">
+            <button type="button" class="faq-btn" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px 20px; text-align: left; background: none; border: 0; font-size: 15px; font-weight: 600; color: var(--ink-1); cursor: pointer;">
+              <span>¿Qué son los GreenCoins?</span>
+              {{ macros.icon('chevDown', size=18) }}
+            </button>
+            <div class="faq-a" style="max-height: 0; overflow: hidden; transition: max-height 0.25s ease-out; padding: 0 20px; background-color: var(--bg-app);">
+              <p style="padding: 16px 0; margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5;">
+                Los GreenCoins (GC) son la moneda interna de GreenHash. Los ganas reciclando materiales aceptados y puedes usarlos para canjear productos sostenibles de nuestro catálogo o transferirlos a otros usuarios.
+              </p>
+            </div>
+          </li>
+
+          <li class="faq-item" style="border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background-color: var(--bg-card);">
+            <button type="button" class="faq-btn" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px 20px; text-align: left; background: none; border: 0; font-size: 15px; font-weight: 600; color: var(--ink-1); cursor: pointer;">
+              <span>¿Cómo reciclo materiales?</span>
+              {{ macros.icon('chevDown', size=18) }}
+            </button>
+            <div class="faq-a" style="max-height: 0; overflow: hidden; transition: max-height 0.25s ease-out; padding: 0 20px; background-color: var(--bg-app);">
+              <p style="padding: 16px 0; margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5;">
+                Acércate a un punto de recogida GreenHash autorizado. Conéctate a la interfaz de reciclaje, deposita tus materiales (plásticos, latas, etc.) limpios y secos, y la máquina validará automáticamente tu entrega para acreditarte la recompensa.
+              </p>
+            </div>
+          </li>
+
+          <li class="faq-item" style="border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background-color: var(--bg-card);">
+            <button type="button" class="faq-btn" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px 20px; text-align: left; background: none; border: 0; font-size: 15px; font-weight: 600; color: var(--ink-1); cursor: pointer;">
+              <span>¿Cómo se calcula el impuesto a las transferencias?</span>
+              {{ macros.icon('chevDown', size=18) }}
+            </button>
+            <div class="faq-a" style="max-height: 0; overflow: hidden; transition: max-height 0.25s ease-out; padding: 0 20px; background-color: var(--bg-app);">
+              <p style="padding: 16px 0; margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5;">
+                Para garantizar la sostenibilidad financiera y el mantenimiento público de los puntos de reciclaje, el Estado deduce automáticamente un impuesto fijo del 2% (TASA_IMPUESTO = 0.02) sobre cada transferencia realizada de billetera a billetera.
+              </p>
+            </div>
+          </li>
+
+          <li class="faq-item" style="border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background-color: var(--bg-card);">
+            <button type="button" class="faq-btn" style="display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 16px 20px; text-align: left; background: none; border: 0; font-size: 15px; font-weight: 600; color: var(--ink-1); cursor: pointer;">
+              <span>¿Qué medidas de seguridad utiliza la plataforma?</span>
+              {{ macros.icon('chevDown', size=18) }}
+            </button>
+            <div class="faq-a" style="max-height: 0; overflow: hidden; transition: max-height 0.25s ease-out; padding: 0 20px; background-color: var(--bg-app);">
+              <p style="padding: 16px 0; margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5;">
+                GreenHash implementa aserciones robustas de Diseño por Contrato (DbC) para validar estados, algoritmos de firma digital RSA para evitar la falsificación de transacciones, contraseñas cifradas con bcrypt y logs de auditoría inmutables parametrizados contra inyecciones SQL.
+              </p>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+
+      <div class="card help-contact" style="display: flex; flex-direction: column; gap: 15px;">
+        <div class="card-head"><h3>¿Aún necesitas ayuda?</h3></div>
+        <p class="muted" style="font-size: 14px; color: var(--ink-2); margin: 0;">Nuestro equipo de soporte técnico está disponible para atender dudas operacionales.</p>
+        
+        <div class="contact-list" style="display: flex; flex-direction: column; gap: 15px; margin-top: 10px;">
+          <div class="contact-item" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 6px; background-color: var(--bg-app);">
+            <span style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background-color: var(--g-100); color: var(--g-700);">
+              {{ macros.icon('bell', size=18) }}
+            </span>
+            <div>
+              <strong style="display: block; font-size: 14px;">Canal Oficial</strong>
+              <span class="muted" style="font-size: 12px; color: var(--ink-2);">Soporte académico y técnico</span>
+            </div>
+          </div>
+          <div class="contact-item" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 6px; background-color: var(--bg-app);">
+            <span style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background-color: var(--g-100); color: var(--g-700);">
+              {{ macros.icon('help', size=18) }}
+            </span>
+            <div>
+              <strong style="display: block; font-size: 14px;">soporte@greenhash.eco</strong>
+              <span class="muted" style="font-size: 12px; color: var(--ink-2);">Atención por correo en 24h</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-primary full" style="margin-top: 10px;">Contactar soporte</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.faq-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var item = btn.parentElement;
+        var ans = item.querySelector('.faq-a');
+        var icon = btn.querySelector('svg');
+        
+        if (item.classList.contains('open')) {
+          item.classList.remove('open');
+          ans.style.maxHeight = '0px';
+          icon.style.transform = 'rotate(0deg)';
+        } else {
+          // Close others
+          document.querySelectorAll('.faq-item').forEach(function(other) {
+            other.classList.remove('open');
+            other.querySelector('.faq-a').style.maxHeight = '0px';
+            var otherIcon = other.querySelector('.faq-btn svg');
+            if (otherIcon) otherIcon.style.transform = 'rotate(0deg)';
+          });
+          
+          item.classList.add('open');
+          ans.style.maxHeight = ans.scrollHeight + 'px';
+          icon.style.transform = 'rotate(180deg)';
+        }
+      });
+    });
+  </script>
+{% endblock %}

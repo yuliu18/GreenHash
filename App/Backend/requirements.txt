@@ -1,0 +1,7 @@
+Flask==3.0.3
+icontract==2.6.2
+bcrypt==4.1.2
+PyMySQL==1.1.0
+python-dotenv==1.0.1
+cryptography==42.0.5
+pytest==8.2.0
