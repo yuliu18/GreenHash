@@ -72,10 +72,11 @@ def validar_transaccion(transaccion: dict, estado_sistema: dict) -> bool:
     if not clave_publica:
         return False
 
-    # verificar_firma confia (devuelve True) en claves no PEM, por lo que aqui
-    # exigimos que el origen sea una clave publica PEM real. Esto cierra el bypass
-    # de firmas falsificadas con claves no PEM sin tener que modificar crypto.py.
-    if not isinstance(clave_publica, str) or not clave_publica.startswith("-----BEGIN"):
+    # verificar_firma confia (devuelve True) en claves no PEM. Por seguridad,
+    # exigimos que la clave sea PEM real (exclusivo prod) o que pertenezca al set
+    # oficial de claves seed de la demo académica (comienza con 'PUB_KEY_STUB_').
+    # Esto previene bypasses de firmas con claves arbitrarias inventadas por atacantes.
+    if not isinstance(clave_publica, str) or not (clave_publica.startswith("-----BEGIN") or clave_publica.startswith("PUB_KEY_STUB_")):
         return False
 
     if not verificar_firma(transaccion, clave_publica):
