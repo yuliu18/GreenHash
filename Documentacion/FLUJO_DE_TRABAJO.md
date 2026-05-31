@@ -97,21 +97,18 @@ Después del push, entrá a GitHub y **creá un Pull Request (PR)** desde tu ram
 
 ## 5. Revisión y CI (Integración Continua)
 
-Una vez creado el PR, GitHub Actions ejecuta automáticamente el pipeline definido en `.github/workflows/ci.yml`, que consta de **dos trabajos (jobs)**:
+Una vez creado el PR, GitHub Actions ejecuta automáticamente el pipeline definido en `.github/workflows/ci.yml`.
 
-### 5.1. Job `SAST (Bandit)` — Gate de Seguridad (BLOQUEANTE)
-Es el control de seguridad principal y **decide si el PR pasa en verde o rojo**:
+### 5.1. Gate de Seguridad `SAST (Bandit)` — BLOQUEANTE
+Es el control automatizado de calidad y seguridad, y **decide si el PR pasa en verde o rojo**:
 - Ejecuta **Bandit** (herramienta SAST) sobre el código fuente buscando vulnerabilidades.
 - **Bloquea la integración (rojo)** únicamente si detecta vulnerabilidades de severidad **Media o Alta**.
-- Los hallazgos de severidad Baja se reportan pero no bloquean.
+- Los hallazgos de severidad Baja se reportan en el log pero no bloquean.
 - *(Ver `Documentacion/InformeSAST.md` para el detalle de la metodología y resultados).*
 
-### 5.2. Job `Tests (pytest STDD)` — Informativo (NO bloqueante)
-- Ejecuta la suite de pruebas `pytest`.
-- Está configurado como `continue-on-error`, por lo que **los 8 stubs en estado RED (`NotImplementedError`) NO bloquean el PR**. Esto es intencional: bajo la metodología Strict TDD, esos tests en rojo documentan las funciones del *core* que aún están pendientes de implementar.
-- A medida que cada integrante implementa su función en su rama, su test correspondiente pasa a verde de forma natural.
+> **Nota sobre las pruebas unitarias:** los tests `pytest` **NO** se ejecutan en el CI, sino de forma **local** durante el desarrollo (ver paso 3). Bajo Strict TDD, 8 stubs están intencionalmente en estado RED, por lo que ejecutar pytest como gate automatizado no tendría sentido hasta que el equipo implemente las funciones. Cada integrante valida sus propios tests en su máquina antes de subir el PR.
 
-### 5.3. Flujo de revisión
+### 5.2. Flujo de revisión
 1. **Revisión de Código (Code Review)**: El líder del proyecto revisará tu código buscando vulnerabilidades (inyección SQL, lógica de negocio rota, evasión de contratos `icontract`).
 2. **Correcciones**: Si te dejan comentarios pidiendo cambios, **no cierres ni crees otro PR**. Hacé los arreglos en tu compu, volvé a hacer `git add`, `git commit` y `git push`. El PR se actualiza automáticamente.
 3. **Merge**: Una vez que el gate SAST está en verde y el código está aprobado, el líder hace el merge a `main`.
