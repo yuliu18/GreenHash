@@ -11,31 +11,31 @@ from app.db import get_db_connection
 @icontract.require(lambda material: isinstance(material, str) and material.strip() != "")
 @icontract.require(lambda catalogo: isinstance(catalogo, dict))
 @icontract.ensure(lambda result: isinstance(result, dict))
-def registrar_recompensa_reciclaje(cartera: dict, material: str, catalogo: dict) -> dict:
-    """Registra una recompensa por reciclaje (Stub para el equipo)."""
 def registrar_recompensa_reciclaje(cartera: dict, material: str, catalogo: dict, peso_kg: float = 1.0) -> dict:
-    # 1. Consultar precio por kilo en el catálogo
+    """Registra una recompensa por reciclaje y devuelve el bloque transaccional."""
+    # 1. Consultar precio por kilo en el catálogo local
     precio_por_kg = catalogo.get(material, 0)
     
-    # 2. Calcular la recompensa base
-    recompensa_base = peso_kg * precio_por_kg
+    # 2. Calcular la recompensa base en enteros
+    recompensa_base = int(peso_kg * precio_por_kg)
     
-    # 3. Calcular impuesto ecológico (10%) y el valor neto
-    impuesto = int(recompensa_base * 0.10)
+    # 3. Calcular impuesto ecológico (10%) y valor neto en enteros
+    impuesto = recompensa_base * 10 // 100
     neto_a_depositar = recompensa_base - impuesto
     
-    # 4. Incrementar el saldo de la cartera
-    cartera["saldo"] = cartera.get("saldo", 0) + neto_a_depositar
+    # 4. Incrementar el saldo de la cartera localmente
+    cartera["saldo"] = int(cartera.get("saldo", 0)) + neto_a_depositar
     
-    # 5. Retornar el recibo/bloque transaccional
+    # 5. Retornar el bloque transaccional estructurado
+    # monedas_entrada = total bruto en recompensa
+    # monedas_salida = neto a depositar
     return {
-        "tipo": "Recompensa",
-        "material": material,
-        "peso_kg": peso_kg,
-        "recompensa_bruta": recompensa_base,
+        "tipo": "recompensa",
+        "origen": cartera.get("clave_publica", "sistema_iot"),
+        "destino": cartera.get("clave_publica", "usuario"),
+        "monedas_entrada": [{"valor": recompensa_base}],
+        "monedas_salida": [{"valor": neto_a_depositar}],
         "impuesto": impuesto,
-        "recompensa_neta": neto_a_depositar,
-        "cartera_destino": cartera.get("clave_publica", "desconocida"),
         "estado": "VALIDA"
     }
 

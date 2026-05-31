@@ -809,9 +809,16 @@ def reciclar_accion():
         return redirect(url_for("web.reciclar_form"))
     
     from app.core.rewards import registrar_recompensa_reciclaje
+    from app.security.decorators import auditar, validar, firmar
     
     user_id = obtener_usuario_id()
     material = request.form.get("material", "Plástico PET")
+    try:
+        peso = float(request.form.get("peso", "1.0"))
+        if peso <= 0:
+            peso = 1.0
+    except (ValueError, TypeError):
+        peso = 1.0
     
     # Construir cartera del usuario actual desde BD
     cartera = {"saldo": 0}
@@ -836,11 +843,50 @@ def reciclar_accion():
     except Exception:
         pass
 
+    @auditar
+    @validar
+    @firmar
+    def _operacion():
+        return registrar_recompensa_reciclaje(cartera, material, catalogo, peso)
+
     try:
-        registrar_recompensa_reciclaje(cartera, material, catalogo)
-        flash("Reciclaje registrado con éxito", "success")
+        transaccion = _operacion()
+        
+        # Persistencia atómica en Base de Datos MariaDB
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # 1. Incrementar el saldo real de la wallet del usuario en DB
+                neto_recompensa = transaccion["monedas_salida"][0]["valor"]
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
+                    (neto_recompensa, transaccion["origen"])
+                )
+                # 2. Insertar la transacción firmada y validada en el ledger
+                import json
+                import datetime
+                timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute(
+                    "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        transaccion["tipo"].upper(),
+                        transaccion["origen"],
+                        transaccion["destino"],
+                        json.dumps(transaccion["monedas_entrada"]),
+                        json.dumps(transaccion["monedas_salida"]),
+                        transaccion["impuesto"],
+                        timestamp_str,
+                        transaccion.get("firma", ""),
+                        transaccion["estado"]
+                    )
+                )
+            conn.commit()
+            
+        flash(f"Reciclaje registrado con éxito. Recompensa de {neto_recompensa} GreenCoins acreditada.", "success")
     except NotImplementedError:
-        flash("[STDD RED STATE] 'registrar_recompensa_reciclaje()' es un stub académico. Implementa la lógica en la rama feature/rewards en rewards.py para calcular y depositar la recompensa.", "warning")
+        flash("[STDD RED STATE] 'registrar_recompensa_reciclaje()' es un stub académico.", "warning")
+    except icontract.ViolationError as exc:
+        flash(f"Infracción de contrato: {exc}", "danger")
     return redirect(url_for("web.reciclar_form"))
 
 
