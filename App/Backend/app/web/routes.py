@@ -935,11 +935,12 @@ def historial():
                     except Exception:
                         val = 0.0
 
-                    if r["tipo"] == "Compra":
+                    tipo_upper = r["tipo"].upper()
+                    if tipo_upper == "COMPRA":
                         desc = f"Canje: {r['destino']}"
                         amount = -val
-                    elif r["tipo"] == "Recompensa":
-                        desc = f"Reciclaje: {r['origen']}"
+                    elif tipo_upper == "RECOMPENSA":
+                        desc = "Recompensa por reciclaje"
                         amount = val
                     else:
                         if rol == "admin":
