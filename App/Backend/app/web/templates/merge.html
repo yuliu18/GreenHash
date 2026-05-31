@@ -1,0 +1,43 @@
+<!-- variables: current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Fusionar Monedas (Merge)</a></span>
+    </nav>
+    <div class="page-head"><h1>Fusionar GreenCoins (Merge)</h1><p>Consolida tu billetera unificando múltiples monedas fraccionadas pequeñas en una sola moneda de mayor valor.</p></div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-head"><h3>Formulario de Fusión</h3></div>
+        
+        <form method="post" action="{{ url_for('web.merge_accion') }}">
+          <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+          
+          <label class="field">
+            <span class="field-label">IDs de Monedas a Fusionar (separadas por comas)</span>
+            <span class="input-ico"><span className="ii">{{ macros.icon('coin', size=18) }}</span>
+              <input type="text" name="monedas_ids" placeholder="Ej. GH-COIN-0128, GH-COIN-1944" required />
+            </span>
+            <span class="field-hint">Las monedas seleccionadas deben pertenecer a tu billetera y estar en estado activo.</span>
+          </label>
+
+          <button type="submit" class="btn-primary btn-lg full" style="margin-top: 20px;">Ejecutar Fusión (Merge)</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Trazabilidad y Prevención de Doble Gasto</h3></div>
+        <p class="muted" style="line-height: 1.5; font-size: 13.5px; margin-bottom: 16px;">
+          El protocolo GreenHash asegura el control presupuestario y la legitimidad de fondos mediante fusiones (<b>Merge</b>) firmadas criptográficamente. Las monedas de entrada quedan marcadas como "GASTADAS" de forma inalterable y la moneda resultante hereda la suma de sus valores.
+        </p>
+        <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; fontSize: 13px; line-height: 1.4;">
+          <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
+          La función de negocio <code>merge()</code> en <code>transactions.py</code> es un stub académico. Para que tu equipo haga pasar esta prueba de <b>ROJO a VERDE</b>, deben codificar la lógica de unificación de saldo y actualizar los registros de forma segura en la base de datos.
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

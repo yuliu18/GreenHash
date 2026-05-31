@@ -1,0 +1,120 @@
+<!-- variables: catalogo_items:list, current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Gestión Catálogo</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Gestión del Catálogo de Recompensas</h1>
+      <p>Administra los productos ecológicos y sostenibles del campus disponibles para canje con GreenCoins.</p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <div class="card-head" style="border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 15px;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          {{ macros.icon('bag', size=18) }} Recompensas Activas del Campus
+        </h3>
+      </div>
+      
+      <!-- Panel de alerta local para notificaciones AJAX de éxito/error (CERO recarga) -->
+      <div id="catalog-alert" style="display: none; padding: 12px; margin-bottom: 16px; border-radius: 8px; font-size: 13.5px; font-weight: bold;"></div>
+
+      <table class="data-table" style="margin-bottom: 24px;">
+        <thead>
+          <tr>
+            <th>Producto / Recompensa</th>
+            <th class="ta-r">Precio en GreenCoins (GC)</th>
+            <th class="ta-r">Estado</th>
+          </tr>
+        </thead>
+        <tbody id="catalog-list-body">
+          {% for item in catalogo_items %}
+            <tr>
+              <td><b>{{ item.material }}</b></td>
+              <td class="ta-r"><b>{{ item.precio }} GC</b></td>
+              <td class="ta-r"><span class="pill ok">Disponible</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3" class="empty">No hay recompensas registradas en el catálogo.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Formulario AJAX para Añadir Recompensas -->
+      <form id="catalog-form" style="border-top: 1px solid #eee; padding-top: 20px;" method="post" action="{{ url_for('web.agregar_producto') }}">
+        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
+        <h4 style="margin: 0 0 10px; font-size: 15px; color: var(--g-800);">Registrar Nueva Recompensa</h4>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 16px;">
+          <label class="field" style="flex: 2; min-width: 200px; display: flex; flex-direction: column; gap: 6px;">
+            <span class="field-label" style="font-size: 12px; font-weight: 600; color: var(--ink-2);">Nombre del Material/Producto</span>
+            <input type="text" name="material" placeholder="Ej. Libreta Eco" required style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13.5px;" />
+          </label>
+          <label class="field" style="flex: 1; min-width: 100px; display: flex; flex-direction: column; gap: 6px;">
+            <span class="field-label" style="font-size: 12px; font-weight: 600; color: var(--ink-2);">Precio (GC)</span>
+            <input type="number" step="1" name="precio" placeholder="2" required style="padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13.5px;" />
+          </label>
+        </div>
+        
+        <div style="padding: 12px; border-radius: 8px; background-color: #eaf6ed; border: 1px solid #c8e6c9; color: #2e7d32; font-size: 12.5px; line-height: 1.4; margin-bottom: 16px;">
+          <strong>🔒 Control de Seguridad e Inserción Parametrizada (UML-S DSM 1/4)</strong><br/>
+          Este formulario utiliza sentencias SQL parametrizadas seguras integradas en <code>modificar_catalogo_recompensas()</code> para evitar inyecciones SQL lógicas y asegurar el inventario.
+        </div>
+
+        <button type="submit" class="btn-primary">Registrar en Catálogo</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // AJAX Handler: Registrar Nueva Recompensa en Catálogo
+    document.getElementById('catalog-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      var form = event.target;
+      var formData = new FormData(form);
+      
+      fetch(form.action, {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        var alertDiv = document.getElementById('catalog-alert');
+        alertDiv.innerText = data.message;
+        alertDiv.style.display = 'block';
+        
+        if (data.status === 'success') {
+          alertDiv.style.backgroundColor = '#e6f4ea';
+          alertDiv.style.color = '#137333';
+          alertDiv.style.border = '1px solid #c8e6c9';
+          
+          // Append new product row to catalog table dynamically
+          var tbody = document.getElementById('catalog-list-body');
+          var newRow = document.createElement('tr');
+          newRow.innerHTML = '<td><b>' + data.material + '</b></td><td class="ta-r"><b>' + parseFloat(data.precio).toFixed(1) + ' GC</b></td><td class="ta-r"><span class="pill ok">Disponible</span></td>';
+          
+          // If empty row exists, remove it
+          var emptyRow = tbody.querySelector('.empty');
+          if (emptyRow) {
+            emptyRow.parentNode.removeChild(emptyRow);
+          }
+          
+          tbody.appendChild(newRow);
+          
+          // Clean fields
+          form.querySelector('input[name="material"]').value = '';
+          form.querySelector('input[name="precio"]').value = '';
+        } else {
+          alertDiv.style.backgroundColor = '#fdecea';
+          alertDiv.style.color = '#c5221f';
+          alertDiv.style.border = '1px solid #ffcdd2';
+        }
+      })
+      .catch(err => {
+        alert('Error al registrar recompensa: ' + err);
+      });
+    });
+  </script>
+{% endblock %}

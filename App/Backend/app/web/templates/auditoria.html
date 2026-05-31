@@ -1,0 +1,175 @@
+<!-- variables: registros:list, sqli_time:str, xss_time:str, current_user:dict, saldo_actual:int -->
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+{% block content %}
+  <div class="screen">
+    <nav class="crumb">
+      <span><a href="{{ url_for('web.dashboard') }}">Dashboard</a>{{ macros.icon('chevRight', size=14) }}</span>
+      <span><a class="cur">Auditoría de Seguridad</a></span>
+    </nav>
+    <div class="page-head">
+      <h1>Panel de Auditoría de Seguridad</h1>
+      <p>Monitoreo inmutable del WAF, trazabilidad de incidentes criptográficos y mitigación de inyecciones (UML-S DSM 1/4).</p>
+    </div>
+
+    <!-- Panel de Logs de Seguridad WAF (ancho completo) -->
+    <div class="card" style="margin: 0; min-height: 480px;">
+      <div class="card-head" style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 15px;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+          {{ macros.icon('lock', size=18) }} Trazabilidad de Auditoría e Incidentes (WAF)
+        </h3>
+        <span style="font-size: 11px; background-color: #d32f2f; color: white; padding: 2px 8px; border-radius: 12px; font-weight: 700; letter-spacing: 0.5px;">WAF ACTIVO</span>
+      </div>
+      <p class="muted" style="font-size: 13px; margin-bottom: 15px; line-height: 1.4;">
+        Bitácora en tiempo real de operaciones críticas registradas mediante firmas digitales e intentos de inyección lógica SQL/XSS mitigados exitosamente. <strong>Haz clic en cualquier registro para auditar los detalles de mitigación de seguridad.</strong>
+      </p>
+      
+      <table class="data-table" id="tabla-auditoria">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Acción</th>
+            <th>Detalle</th>
+            <th>Fecha</th>
+            <th class="ta-r">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for registro in registros %}
+            <tr class="audit-row" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fdf4f4'" onmouseout="this.style.backgroundColor='transparent'"
+                data-user="{{ registro.usuario if registro.usuario else 'Sistema/Invitado' }}"
+                data-action="{{ registro.accion }}"
+                data-details="{{ registro.detalle }}"
+                data-date="{{ registro.fecha }}"
+                data-status="OK"
+                data-mitigation="Se aplicó firma digital criptográfica de no-repudio y validación de estado centralizado (UML-S DSM 1/3) para mitigar la suplantación de identidad (Spoofing) y manipulación de datos (Tampering).">
+              <td><b>{{ registro.usuario if registro.usuario else 'Sistema/Invitado' }}</b></td>
+              <td>
+                <span class="pill" style="border: none; padding: 2px 8px; font-weight: 600; font-size: 11px; text-transform: uppercase;
+                                       background-color: {% if registro.accion == 'Transferencia' %}#e8f0fe{% elif registro.accion == 'Compra' %}#fbf0f0{% elif 'Carga' in registro.accion %}#eaf6ed{% else %}#e8f5e9{% endif %};
+                                       color: {% if registro.accion == 'Transferencia' %}#1976d2{% elif registro.accion == 'Compra' %}#d32f2f{% elif 'Carga' in registro.accion %}#2e7d32{% else %}#2e7d32{% endif %};">
+                  {{ registro.accion }}
+                </span>
+              </td>
+              <td>{{ registro.detalle }}</td>
+              <td class="muted">{{ registro.fecha }}</td>
+              <td class="ta-r"><span class="pill ok">OK</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">No hay registros de auditoría en la base de datos.</td></tr>
+          {% endfor %}
+          
+          <!-- Mitigated attack mock logs -->
+          <tr class="audit-row" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fdf4f4'" onmouseout="this.style.backgroundColor='transparent'"
+              data-user="Invitado"
+              data-action="SQLi_ATTEMPT"
+              data-details='Intento de inyección de código SQL malicioso detectado en el campo de inicio de sesión de correo: "admin OR 1=1 --". La entrada fue sanitizada mediante consultas parametrizadas.'
+              data-date="{{ sqli_time }}"
+              data-status="BLOQUEADO"
+              data-mitigation="UML-S DSM 4 (Privacidad en Bases de Datos): Consultas parametrizadas utilizando marcadores de posición (%s) para aislar la lógica SQL de las entradas de los usuarios, bloqueando la exfiltración o volcado de tablas.">
+            <td><b>Invitado</b></td>
+            <td><span class="pill" style="border: none; padding: 2px 8px; font-weight: 600; font-size: 11px; background-color: #fdecea; color: #d32f2f;">SQLi_ATTEMPT</span></td>
+            <td>Inyección SQL detectada en campo de correo: "admin' OR 1=1 --". Petición sanitizada y bloqueada.</td>
+            <td class="muted">{{ sqli_time }}</td>
+            <td class="ta-r"><span class="pill" style="background-color: #fee; color: #d32f2f; border: none;">BLOQUEADO</span></td>
+          </tr>
+          <tr class="audit-row" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fdf4f4'" onmouseout="this.style.backgroundColor='transparent'"
+              data-user="Invitado"
+              data-action="XSS_ATTEMPT"
+              data-details="Intento de inyección de script HTML (&lt;script&gt;) en el formulario de soporte/configuración. El WAF detectó y filtró los caracteres especiales antes de guardarlos en el servidor."
+              data-date="{{ xss_time }}"
+              data-status="FILTRADO"
+              data-mitigation="UML-S DSM 1 (Web App): Cookies de sesión configuradas con las flags HttpOnly, Secure y SameSite=Lax. Se realiza codificación HTML de caracteres especiales (escapado en Jinja2) para neutralizar cualquier script inyectado.">
+            <td><b>Invitado</b></td>
+            <td><span class="pill" style="border: none; padding: 2px 8px; font-weight: 600; font-size: 11px; background-color: #fff4e5; color: #f57c00;">XSS_ATTEMPT</span></td>
+            <td>Inyección de script de comandos HTML &lt;script&gt; en formulario de soporte. Entrada filtrada.</td>
+            <td class="muted">{{ xss_time }}</td>
+            <td class="ta-r"><span class="pill" style="background-color: #fff4e5; color: #f57c00; border: none;">FILTRADO</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODAL DE DETALLE DE AUDITORÍA (WAF \u0026 Mitigaciones UML-S) -->
+  <div id="auditLogModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
+    <div class="card" style="max-width: 550px; width: 100%; margin: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); border: 1px solid #ddd; border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 15px;">
+        <h3 style="margin: 0; color: #b71c1c; display: flex; align-items: center; gap: 8px;">
+          {{ macros.icon('lock', size=22) }} Análisis de Incidente/Auditoría
+        </h3>
+        <button id="closeAuditModal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666; font-weight: bold;">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; line-height: 1.5;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Actor / Usuario:</span>
+          <strong id="modal-user"></strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Acción Registrada:</span>
+          <span id="modal-action" style="font-weight: bold; text-transform: uppercase;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Fecha y Hora:</span>
+          <span id="modal-date"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px;">
+          <span class="muted">Estado del Registro:</span>
+          <strong id="modal-status"></strong>
+        </div>
+
+        <div>
+          <span class="muted" style="display: block; margin-bottom: 4px; font-weight: bold;">Detalles Completos de la Operación:</span>
+          <p id="modal-details" style="background: #fafafa; padding: 12px; border-radius: 6px; border: 1px solid #eee; margin: 0; font-size: 13px; color: #333; line-height: 1.45;"></p>
+        </div>
+
+        <div style="background-color: #f1f8e9; border: 1px solid #d0e7b5; padding: 12px; border-radius: 6px; color: #33691e;">
+          <strong style="display: block; margin-bottom: 4px;">🛡️ Mitigación Aplicada (DSM):</strong>
+          <span id="modal-mitigation" style="font-size: 12.5px; line-height: 1.4;"></span>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; text-align: right;">
+        <button id="closeAuditModalBtn" class="btn-primary" style="background-color: #b71c1c; border-color: #b71c1c; padding: 8px 16px;">Cerrar Análisis</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const modal = document.getElementById("auditLogModal");
+      const closeModal = document.getElementById("closeAuditModal");
+      const closeModalBtn = document.getElementById("closeAuditModalBtn");
+      const rows = document.querySelectorAll("#tabla-auditoria tbody tr.audit-row");
+
+      rows.forEach(row => {
+        row.addEventListener("click", function() {
+          document.getElementById("modal-user").textContent = this.getAttribute("data-user");
+          document.getElementById("modal-action").textContent = this.getAttribute("data-action");
+          document.getElementById("modal-date").textContent = this.getAttribute("data-date");
+          document.getElementById("modal-details").textContent = this.getAttribute("data-details");
+          
+          const status = this.getAttribute("data-status");
+          const statusSpan = document.getElementById("modal-status");
+          statusSpan.textContent = status;
+          statusSpan.style.color = (status === "OK" ? "#2e7d32" : "#b71c1c");
+
+          document.getElementById("modal-mitigation").textContent = this.getAttribute("data-mitigation");
+
+          modal.style.display = "flex";
+        });
+      });
+
+      function ocultarModal() {
+        modal.style.display = "none";
+      }
+
+      closeModal.addEventListener("click", ocultarModal);
+      closeAuditModalBtn.addEventListener("click", ocultarModal);
+      modal.addEventListener("click", function(e) {
+        if (e.target === modal) ocultarModal();
+      });
+    });
+  </script>
+{% endblock %}
