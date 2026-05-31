@@ -312,7 +312,12 @@ def tienda():
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, material as name, precio as price FROM catalogo_recompensas ORDER BY material")
+                # Solo traemos los 4 productos fisicos canjeables de la tienda
+                cur.execute(
+                    "SELECT id, material as name, precio/100.0 as price FROM catalogo_recompensas "
+                    "WHERE material IN ('Silla Algas', 'Mochila Eco', 'Botella Verde', 'Maceta Bio') "
+                    "ORDER BY material"
+                )
                 rows = cur.fetchall()
                 for r in rows:
                     name = r["name"]
@@ -375,7 +380,7 @@ def comprar_recompensa():
                 clave_publica = wallet["clave_publica"]
                 
                 if saldo_actual < precio:
-                    flash(f"Saldo insuficiente ({saldo_actual} GC) para canjear '{material}' ({precio} GC)", "warning")
+                    flash(f"Saldo insuficiente ({saldo_actual / 100.0:.2f} GC) para canjear '{material}' ({precio / 100.0:.2f} GC)", "warning")
                     return redirect(url_for("web.tienda"))
                     
                 # 3. Debitar balance
@@ -447,11 +452,17 @@ def beneficios():
                 if search_query:
                     # Inserción parametrizada para búsqueda segura contra inyecciones SQL (UML-S DSM 4)
                     cur.execute(
-                        "SELECT material, precio FROM catalogo_recompensas WHERE material LIKE %s ORDER BY material",
+                        "SELECT material, precio/100.0 as precio FROM catalogo_recompensas "
+                        "WHERE material LIKE %s AND material IN ('Plástico PET', 'Aluminio / Latas', 'Vidrio', 'Papel y Cartón') "
+                        "ORDER BY material",
                         (f"%{search_query}%",)
                     )
                 else:
-                    cur.execute("SELECT material, precio FROM catalogo_recompensas ORDER BY material")
+                    cur.execute(
+                        "SELECT material, precio/100.0 as precio FROM catalogo_recompensas "
+                        "WHERE material IN ('Plástico PET', 'Aluminio / Latas', 'Vidrio', 'Papel y Cartón') "
+                        "ORDER BY material"
+                    )
                 rows = cur.fetchall()
                 for r in rows:
                     materiales.append({
