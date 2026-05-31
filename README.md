@@ -10,13 +10,13 @@
 
 | # | GitHub |
 |---|--------|
-| 1 | — |
-| 2 | — |
-| 3 | — |
-| 4 | — |
-| 5 | — |
-| 6 | — |
-| 7 | — |
+| 1 | [@yuliu18](https://github.com/yuliu18) |
+| 2 | [@sgwb1re19](https://github.com/sgwb1re19) |
+| 3 | [@sgwb2fe34](https://github.com/sgwb2fe34) |
+| 4 | [@sgwb2kk30](https://github.com/sgwb2kk30) |
+| 5 | [@sgwb1yy10](https://github.com/sgwb1yy10) |
+| 6 | [@sgwi2](https://github.com/sgwi2) |
+| 7 | [@alexjandro9834](https://github.com/alexjandro9834) |
 
 ### 1.2 Capacidades y conocimientos
 
