@@ -54,9 +54,9 @@ Con el fin de evitar confusiones al equipo de desarrollo ("coger mosca"), cada f
 * **Acceso y Simulación en la App:** Panel **Transferir** (ingresar destinatario y monto).
 * **⚙️ Lógica Detallada a Implementar y Cálculo de Impuestos:**
   1. **Validación de Fondos:** Verificar que `origen["saldo"] >= monto`.
-  2. **Cálculo de Impuesto de Red:** Aplicar un impuesto del **5%** al monto total de la transferencia para financiar la red de validación.
+  2. **Cálculo de Impuesto de Red:** Aplicar un impuesto del **2%** (`TASA_IMPUESTO = 0.02`) al monto total de la transferencia para financiar la red de validación.
      ```python
-     impuesto = int(monto * 0.05)
+     impuesto = int(monto * TASA_IMPUESTO)  # TASA_IMPUESTO = 0.02
      ```
   3. **Conservación de Valor:** Crear y firmar el bloque de la transacción. El total de monedas de salida (`monedas_salida`) debe ser exactamente igual a las monedas de entrada (`monedas_entrada`) más el impuesto registrado.
      * *Saldo Remitente (Decrementa):* `monto` + `impuesto`.
@@ -103,7 +103,7 @@ Con el fin de evitar confusiones al equipo de desarrollo ("coger mosca"), cada f
 * **⚙️ Lógica Detallada a Implementar:**
   1. Recuperar la clave pública del emisor desde la transacción.
   2. Verificar criptográficamente la firma digital (`firma`) utilizando la clave pública y el contenido del bloque transaccional.
-  3. **Validación del Impuesto:** Confirmar que el valor declarado en la columna `impuesto` coincida con las reglas de red (5% para transferencias, 10% para recompensas).
+  3. **Validación del Impuesto:** Confirmar que el valor declarado en la columna `impuesto` coincida con las reglas de red (2% para transferencias, 10% para recompensas).
   4. Si la firma es válida y los impuestos/saldos son coherentes, retornar `True`; de lo contrario, retornar `False`.
 
 ---

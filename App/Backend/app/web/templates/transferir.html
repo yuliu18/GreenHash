@@ -14,24 +14,26 @@
     <div class="two-col">
       <div class="card">
         <div class="card-head"><h3>Formulario de Transferencia</h3></div>
-        <label class="field">
-          <span class="field-label">Destinatario</span>
-          <span class="input-ico"><span class="ii">{{ macros.icon('user', size=18) }}</span>
-            <input type="text" name="destino" form="transferir-form" placeholder="Ej. Profesor" required />
-          </span>
-        </label>
-        <label class="field">
-          <span class="field-label">Cantidad (GC)</span>
-          <span class="input-ico"><span class="ii">{{ macros.icon('coin', size=18) }}</span>
-            <input type="number" name="monto" form="transferir-form" min="1" step="1" placeholder="0" required />
-          </span>
-        </label>
-        <div class="info-note">
-          {{ macros.icon('info', size=18) }}
-          <span><strong>Impuesto al Estado (2%)</strong>Se calcula automáticamente y se deducirá del monto enviado.</span>
-        </div>
         <form id="transferir-form" method="post" action="{{ url_for('web.transferir_accion') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          
+          <label class="field">
+            <span class="field-label">Destinatario</span>
+            <span class="input-ico"><span class="ii">{{ macros.icon('user', size=18) }}</span>
+              <input type="text" name="destino" placeholder="Ej. Profesor" required />
+            </span>
+          </label>
+          <label class="field">
+            <span class="field-label">Cantidad (GC)</span>
+            <span class="input-ico"><span class="ii">{{ macros.icon('coin', size=18) }}</span>
+              <input type="number" name="monto" min="1" step="1" placeholder="0" required />
+            </span>
+          </label>
+          <div class="info-note">
+            {{ macros.icon('info', size=18) }}
+            <span><strong>Impuesto al Estado (2%)</strong>Se calcula automáticamente y se deducirá del monto enviado.</span>
+          </div>
+          
           <button type="submit" class="btn-primary btn-lg full">Confirmar Transferencia</button>
         </form>
       </div>

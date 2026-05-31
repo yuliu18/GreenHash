@@ -63,6 +63,7 @@ def validar(func: Callable) -> Callable:
             transaccion = func(*args, **kwargs)
             if not verificar_firma(transaccion, transaccion.get("origen", "")):
                 raise icontract.ViolationError("Firma invalida")
+            # En los endpoints actuales no hay estado del sistema precargado; se valida firma e impuesto.
             if not validar_transaccion(transaccion, {}):
                 raise icontract.ViolationError("Validacion rechazada")
             return transaccion

@@ -6,6 +6,8 @@ import icontract
 
 LIMITE_MONEDAS_POR_CARTERA = 100
 TASA_IMPUESTO = 0.02
+# Tasa de impuesto aplicada a las recompensas (10%).
+TASA_IMPUESTO_RECOMPENSA = 0.10
 
 
 def cartera_valida(cartera: dict) -> bool:
