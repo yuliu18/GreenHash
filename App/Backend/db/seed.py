@@ -21,15 +21,15 @@ USUARIOS_DEMO = [
 
 CATALOGO_DEMO = [
     # Recompensas de la Tienda
-    ("Silla Algas", 2),
-    ("Mochila Eco", 1),
-    ("Botella Verde", 1),
-    ("Maceta Bio", 1),
+    ("Silla Algas", 200),
+    ("Mochila Eco", 100),
+    ("Botella Verde", 100),
+    ("Maceta Bio", 100),
     # Materiales de Reciclaje
-    ("Plástico PET", 2),
-    ("Aluminio / Latas", 5),
-    ("Vidrio", 1),
-    ("Papel y Cartón", 1),
+    ("Plástico PET", 200),
+    ("Aluminio / Latas", 500),
+    ("Vidrio", 100),
+    ("Papel y Cartón", 150),
 ]
 
 def seed_database():
@@ -61,11 +61,11 @@ def seed_database():
                     )
                     user_id = cursor.lastrowid
                     
-                    # Crear wallet con 10 GreenCoins de regalo para la demo
+                    # Crear wallet con 10.00 GreenCoins (1000 centavos) de regalo para la demo
                     pub_key = f"PUB_KEY_STUB_{user_id}_{u['nombre']}"
                     cursor.execute(
                         "INSERT INTO wallets (usuario_id, clave_publica, saldo) VALUES (%s, %s, %s)",
-                        (user_id, pub_key, 10)
+                        (user_id, pub_key, 1000)
                     )
 
                 # 2. Poblar catalogo

@@ -71,10 +71,10 @@ def es_billetera_congelada() -> bool:
     return False
 
 
-def get_current_user_and_balance() -> tuple[dict | None, int]:
+def get_current_user_and_balance() -> tuple[dict | None, float]:
     user_id = obtener_usuario_id()
     if not user_id:
-        return None, 0
+        return None, 0.0
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -84,14 +84,14 @@ def get_current_user_and_balance() -> tuple[dict | None, int]:
             user = cur.fetchone()
             cur.execute("SELECT saldo FROM wallets WHERE usuario_id = %s", (user_id,))
             wallet = cur.fetchone()
-            saldo = wallet["saldo"] if wallet else 0
+            saldo = float(wallet["saldo"]) / 100.0 if wallet else 0.0
             return user, saldo
 
 
-def get_current_user_wallet_details() -> tuple[dict | None, int, str]:
+def get_current_user_wallet_details() -> tuple[dict | None, float, str]:
     user_id = obtener_usuario_id()
     if not user_id:
-        return None, 0, ""
+        return None, 0.0, ""
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -101,7 +101,7 @@ def get_current_user_wallet_details() -> tuple[dict | None, int, str]:
             user = cur.fetchone()
             cur.execute("SELECT saldo, clave_publica FROM wallets WHERE usuario_id = %s", (user_id,))
             wallet = cur.fetchone()
-            saldo = wallet["saldo"] if wallet else 0
+            saldo = float(wallet["saldo"]) / 100.0 if wallet else 0.0
             clave_publica = wallet["clave_publica"] if wallet else ""
             return user, saldo, clave_publica
 
@@ -882,7 +882,8 @@ def reciclar_accion():
                 )
             conn.commit()
             
-        flash(f"Reciclaje registrado con éxito. Recompensa de {neto_recompensa} GreenCoins acreditada.", "success")
+        neto_display = float(neto_recompensa) / 100.0
+        flash(f"Reciclaje registrado con éxito. Recompensa de {neto_display:.2f} GreenCoins acreditada.", "success")
     except NotImplementedError:
         flash("[STDD RED STATE] 'registrar_recompensa_reciclaje()' es un stub académico.", "warning")
     except icontract.ViolationError as exc:
@@ -929,9 +930,9 @@ def historial():
                 for r in rows:
                     is_sender = (r["origen"] == clave_publica) if clave_publica else False
                     try:
-                        campo_monedas = "monedas_salida" if r["tipo"] == "Recompensa" else "monedas_entrada"
+                        campo_monedas = "monedas_salida" if r["tipo"].upper() == "RECOMPENSA" else "monedas_entrada"
                         coins = json.loads(r[campo_monedas])
-                        val = sum(float(c.get("valor", 0)) for c in coins)
+                        val = sum(float(c.get("valor", 0)) for c in coins) / 100.0
                     except Exception:
                         val = 0.0
 
@@ -963,7 +964,7 @@ def historial():
                         "type": r["tipo"],
                         "desc": desc,
                         "amount": amount,
-                        "impuesto": r["impuesto"],
+                        "impuesto": float(r["impuesto"]) / 100.0,
                         "origen": r["origen"],
                         "destino": r["destino"],
                         "firma": r["firma"],
