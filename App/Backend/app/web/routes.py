@@ -136,17 +136,18 @@ def dashboard():
                     for r in rows:
                         is_sender = (r["origen"] == clave_publica)
                         try:
-                            campo_monedas = "monedas_salida" if r["tipo"] == "Recompensa" else "monedas_entrada"
+                            campo_monedas = "monedas_salida" if r["tipo"].upper() == "RECOMPENSA" else "monedas_entrada"
                             coins = json.loads(r[campo_monedas])
-                            val = sum(float(c.get("valor", 0)) for c in coins)
+                            val = sum(float(c.get("valor", 0)) for c in coins) / 100.0
                         except Exception:
                             val = 0.0
 
-                        if r["tipo"] == "Compra":
+                        tipo_upper = r["tipo"].upper()
+                        if tipo_upper == "COMPRA":
                             desc = f"Canje: {r['destino']}"
                             amount = -val
-                        elif r["tipo"] == "Recompensa":
-                            desc = f"Reciclaje: {r['origen']}"
+                        elif tipo_upper == "RECOMPENSA":
+                            desc = "Recompensa por reciclaje"
                             amount = val
                         else:
                             if is_sender:
