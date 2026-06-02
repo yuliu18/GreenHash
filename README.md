@@ -17,6 +17,7 @@
 | 5 | [@sgwb1yy10](https://github.com/sgwb1yy10) |
 | 6 | [@sgwi2](https://github.com/sgwi2) |
 | 7 | [@alexjandro9834](https://github.com/alexjandro9834) |
+| 8 | [@sgwb1mj22](https://github.com/sgwb1mj22) |
 
 ### 1.2 Capacidades y conocimientos
 
