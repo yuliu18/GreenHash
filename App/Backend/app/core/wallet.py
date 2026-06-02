@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import icontract
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
 
 from app.core.contracts import LIMITE_MONEDAS_POR_CARTERA, cartera_valida
 
@@ -11,7 +13,31 @@ from app.core.contracts import LIMITE_MONEDAS_POR_CARTERA, cartera_valida
 @icontract.ensure(lambda result: isinstance(result, dict))
 def crear_cartera(nombre_completo: str) -> dict:
     """Crea una cartera con claves y saldo 0 (Stub para el equipo)."""
-    raise NotImplementedError("STDD: implementar en rama feature/wallet")
+    
+    # Primero lo que debo hacer es generar la clave privada usando curva elíptica (SECP256R1), usando la librería acordada e indicada y con eso genero la publica correspondiente que necesito para crear la cartera
+    private_key = ec.generate_private_key(ec.SECP256R1())
+    public_key = private_key.public_key()
+
+    # Segundo tengo que serializar clave privada a formato texto PEM como decidimos y dejamos especificado en el reparto de funciones
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    ).decode('utf-8')
+
+    # Hago los mismo para serializar clave pública a formato texto PEM también para tener ambas en ese formato para la especificación y creacion de la cartera
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    ).decode('utf-8')
+
+    # Devuelvo el diccionario exacto que pide el contrato que sirve para la creación de la cartera al solicitarse
+    return {
+        "nombre_completo": nombre_completo,
+        "clave_publica": public_pem,
+        "clave_privada": private_pem,
+        "saldo": 0
+    }
 
 
 @icontract.require(lambda cartera: cartera_valida(cartera))
