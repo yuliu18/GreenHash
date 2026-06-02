@@ -240,6 +240,10 @@ def transferir_accion():
         flash("El destinatario no existe en la red GreenHash (ingresa su Nombre, Email o Clave Pública)", "danger")
         return redirect(url_for("web.transferir_form"))
 
+    if destino_clave_publica == clave_publica:
+        flash("No puedes transferir GreenCoins a tu propia billetera.", "danger")
+        return redirect(url_for("web.transferir_form"))
+
     @auditar
     @validar
     @firmar
@@ -321,8 +325,20 @@ def split_accion():
         "saldo": saldo_actual,
         "nombre_completo": current_user["nombreCompleto"] if current_user else "Usuario"
     }
-    moneda_id = request.form.get("moneda_id", "")
-    particiones = [int(p) for p in request.form.get("particiones", "").split(",") if p.strip()]
+    moneda_id = request.form.get("moneda_id", "").strip()
+    if not moneda_id:
+        flash("El identificador de moneda no puede estar vacío.", "danger")
+        return redirect(url_for("web.billetera", tab="split"))
+
+    try:
+        particiones = [int(p.strip()) for p in request.form.get("particiones", "").split(",") if p.strip()]
+    except ValueError:
+        flash("Las particiones deben ser números enteros positivos separados por comas (ej: 3, 5, 2).", "danger")
+        return redirect(url_for("web.billetera", tab="split"))
+
+    if not particiones:
+        flash("Debes ingresar al menos una partición.", "danger")
+        return redirect(url_for("web.billetera", tab="split"))
 
     @auditar
     @validar
