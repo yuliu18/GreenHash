@@ -1220,6 +1220,12 @@ def billetera_eliminar():
         flash("No posees una billetera para eliminar", "warning")
         return redirect(url_for("web.billetera"))
     
+    # Protección explícita: no permitir eliminar billetera con saldo activo
+    if cartera.get("saldo", 0) > 0:
+        saldo_display = cartera["saldo"] / 100.0
+        flash(f"No puedes eliminar una billetera con saldo activo ({saldo_display:.2f} GC). Transfiere o gasta el saldo primero.", "danger")
+        return redirect(url_for("web.billetera"))
+
     try:
         resultado = eliminar_cartera(cartera)
         if resultado:
@@ -1227,12 +1233,10 @@ def billetera_eliminar():
                 with conn.cursor() as cur:
                     cur.execute("DELETE FROM wallets WHERE id = %s", (wallet_id,))
                 conn.commit()
-            registrar_operacion_auditoria(user_id, "Eliminar Billetera", f"Billetera (ID: {wallet_id}) eliminada por el usuario.")
-            flash("Billetera eliminada con éxito.", "success")
+            registrar_operacion_auditoria(user_id, "Eliminar Billetera", f"Billetera (ID: {wallet_id}) eliminada. Claves revocadas.")
+            flash("Billetera eliminada con éxito. Las claves criptográficas han sido revocadas.", "success")
         else:
             flash("No se pudo eliminar la billetera.", "warning")
-    except NotImplementedError:
-        flash("[STDD RED STATE] 'eliminar_cartera()' es un stub académico. Implementa la lógica en la rama feature/wallet en wallet.py.", "warning")
     except icontract.ViolationError as exc:
         flash(f"Infracción de contrato: {exc}", "danger")
     except Exception as exc:
@@ -1265,19 +1269,17 @@ def billetera_consultar():
     
     if not cartera:
         return jsonify({"status": "warning", "message": "No posees una billetera activa.", "saldo": 0})
-    
+
+    # El dominio opera en unidades enteras de GC; la BD almacena centavos
+    saldo_raw = cartera.get("saldo", 0)
+    cartera_dominio = {"saldo": saldo_raw // 100, "clave_publica": cartera.get("clave_publica", "")}
+
     try:
-        saldo = consultar_saldo(cartera)
+        saldo = consultar_saldo(cartera_dominio)
         return jsonify({
             "status": "success",
             "message": f"Saldo verificado mediante contrato: {saldo} GC",
             "saldo": saldo
-        })
-    except NotImplementedError:
-        return jsonify({
-            "status": "warning",
-            "message": "[STDD RED STATE] 'consultar_saldo()' es un stub. Implementa la lógica en feature/wallet.",
-            "saldo": cartera.get("saldo", 0)
         })
     except icontract.ViolationError as exc:
         return jsonify({"status": "danger", "message": f"Infracción de contrato: {exc}", "saldo": 0})

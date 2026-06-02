@@ -75,5 +75,5 @@ def representacion_cartera(cartera: dict) -> str:
 @icontract.ensure(lambda result: isinstance(result, int))
 @icontract.ensure(lambda result: 0 <= result <= LIMITE_MONEDAS_POR_CARTERA)
 def consultar_saldo(cartera: dict) -> int:
-    """Devuelve el saldo disponible (Stub para el equipo)."""
-    raise NotImplementedError("STDD: implementar en rama feature/wallet")
+    """Devuelve el saldo disponible en unidades enteras de GreenCoin."""
+    return int(cartera.get("saldo", 0))
