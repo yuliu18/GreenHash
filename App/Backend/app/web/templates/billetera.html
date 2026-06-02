@@ -50,9 +50,9 @@
             <li>La <b>Clave Pública</b> actúa como tu dirección para recibir depósitos.</li>
             <li>La <b>Clave Privada</b> (almacenada localmente) firma digitalmente tus transacciones para evitar suplantaciones de identidad.</li>
           </ul>
-          <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 13px; line-height: 1.4;">
-            <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
-            El método <code>crear_cartera()</code> en <code>wallet.py</code> es un stub académico. Cuando implementes la lógica en la rama <code>feature/wallet</code>, el sistema generará de forma segura el PEM con claves reales y lo persistirá en la base de datos.
+          <div style="padding: 12px; border-radius: 8px; background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; font-size: 13px; line-height: 1.4;">
+            <strong style="display: block; margin-bottom: 4px; color: #155724;">✅ [STDD ESTADO VERDE]</strong>
+            El método <code>crear_cartera()</code> ha sido implementado correctamente. El sistema genera claves EC-SECP256R1 reales en formato PEM y las persiste en la base de datos.
           </div>
         </div>
       {% else %}
@@ -120,9 +120,9 @@
               <code style="display: block; font-weight: bold; color: #1b5e20; margin-bottom: 4px;">@icontract.require(lambda cartera: cartera.get("saldo") == 0)</code>
               "Para poder destruir o eliminar cualquiera de tus billeteras, su saldo registrado en base de datos debe ser exactamente de 0 GC."
             </div>
-            <div style="padding: 12px; border-radius: 8px; background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; font-size: 13px; line-height: 1.4;">
-              <strong style="display: block; margin-bottom: 4px; color: #b58105;">⚠️ [STDD ESTADO ROJO]</strong>
-              Tanto <code>consultar_saldo()</code> como <code>eliminar_cartera()</code> son stubs. Al consultar el saldo de cualquiera de tus billeteras, se invocará el validador que arrojará el cartel de stub controlado hasta que se complete la implementación.
+            <div style="padding: 12px; border-radius: 8px; background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; font-size: 13px; line-height: 1.4;">
+              <strong style="display: block; margin-bottom: 4px; color: #155724;">✅ [STDD ESTADO VERDE]</strong>
+              Tanto <code>consultar_saldo()</code> como <code>eliminar_cartera()</code> han sido implementadas. El validador de contrato verifica el saldo real desde la base de datos y revoca criptográficamente las claves al eliminar.
             </div>
           </div>
         </div>
