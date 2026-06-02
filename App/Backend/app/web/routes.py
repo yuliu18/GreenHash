@@ -1220,7 +1220,6 @@ def billetera_eliminar():
         flash("No posees una billetera para eliminar", "warning")
         return redirect(url_for("web.billetera"))
     
-    # Protección explícita: no permitir eliminar billetera con saldo activo
     if cartera.get("saldo", 0) > 0:
         saldo_display = cartera["saldo"] / 100.0
         flash(f"No puedes eliminar una billetera con saldo activo ({saldo_display:.2f} GC). Transfiere o gasta el saldo primero.", "danger")
