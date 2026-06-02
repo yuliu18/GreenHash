@@ -18,8 +18,22 @@ def crear_cartera(nombre_completo: str) -> dict:
 @icontract.require(lambda cartera: cartera.get("saldo", 0) == 0, "Saldo debe ser 0")
 @icontract.ensure(lambda result: isinstance(result, bool))
 def eliminar_cartera(cartera: dict) -> bool:
-    """Elimina la cartera si no tiene saldo (Stub para el equipo)."""
-    raise NotImplementedError("STDD: implementar en rama feature/wallet")
+    """Elimina la cartera si no tiene saldo."""
+    # 1. Validar saldo
+    if cartera.get("saldo", 0) > 0:
+        raise ValueError("Violación de seguridad: No se pueden destruir fondos activos.")
+        
+    # 2. Dar de baja criptográficamente la clave pública
+    if "clave_publica" in cartera:
+        cartera["clave_publica"] = "REVOCADA"
+    
+    if "clave_privada" in cartera:
+        cartera["clave_privada"] = "REVOCADA"
+        
+    cartera["activa"] = False
+    
+    # 3. Devolvemos True indicando el éxito de la operación
+    return True
 
 
 @icontract.require(lambda cartera: cartera_valida(cartera))
