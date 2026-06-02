@@ -19,8 +19,8 @@ services:
   app:
     build: ../Backend
     environment:
-      FLASK_ENV: development
-      FLASK_DEBUG: 1
+      FLASK_ENV: production
+      FLASK_DEBUG: 0
       SECRET_KEY: "dev-secret-key"
       DB_HOST: mariadb
       DB_PORT: 3306
