@@ -33,10 +33,168 @@ def test_transferencia_no_saldo():
         transferencia(origen, "PUB_KEY_STUB_DESTINO", 500)
 
 
+# ============= TESTS SPLIT =============
+
+def test_split_simple():
+    """Split divide una moneda en dos particiones."""
+    cartera = {"saldo": 10, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = split(cartera, "moneda1", [3, 7])
+    assert isinstance(resultado, dict)
+    assert resultado["tipo"] == "SPLIT"
+    assert len(resultado["monedas_salida"]) == 2
+    assert resultado["monedas_salida"][0]["valor"] == 3
+    assert resultado["monedas_salida"][1]["valor"] == 7
+
+
+def test_split_tres_particiones():
+    """Split divide una moneda en tres particiones."""
+    cartera = {"saldo": 100, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = split(cartera, "moneda1", [25, 35, 40])
+    assert resultado["tipo"] == "SPLIT"
+    assert len(resultado["monedas_salida"]) == 3
+    assert resultado["monedas_salida"][0]["valor"] == 25
+    assert resultado["monedas_salida"][1]["valor"] == 35
+    assert resultado["monedas_salida"][2]["valor"] == 40
+
+
+def test_split_una_particion():
+    """Split con una sola particion devuelve moneda sin cambios."""
+    cartera = {"saldo": 50, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = split(cartera, "moneda1", [50])
+    assert len(resultado["monedas_salida"]) == 1
+    assert resultado["monedas_salida"][0]["valor"] == 50
+
+
+def test_split_particiones_unitarias():
+    """Split divide en varias particiones de valor 1."""
+    cartera = {"saldo": 5, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = split(cartera, "moneda1", [1, 1, 1, 1, 1])
+    assert len(resultado["monedas_salida"]) == 5
+    for moneda in resultado["monedas_salida"]:
+        assert moneda["valor"] == 1
+
+
 def test_split_conservacion_valor():
-    cartera = {"saldo": 10}
-    with pytest.raises(NotImplementedError):
-        split(cartera, "moneda1", [3, 7])
+    """Split conserva el valor total: suma(salida) == suma(entrada)."""
+    cartera = {"saldo": 100, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    particiones = [10, 20, 30, 40]
+    resultado = split(cartera, "moneda1", particiones)
+    suma_salida = sum(m["valor"] for m in resultado["monedas_salida"])
+    suma_entrada = sum(m["valor"] for m in resultado["monedas_entrada"])
+    assert suma_salida == suma_entrada
+
+
+def test_split_retorna_dict_transaccion():
+    """Split retorna un dict de transaccion valido."""
+    cartera = {"saldo": 15, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = split(cartera, "moneda1", [5, 10])
+    assert isinstance(resultado, dict)
+    assert "tipo" in resultado
+    assert "monedas_entrada" in resultado
+    assert "monedas_salida" in resultado
+    assert "estado" in resultado
+
+
+def test_split_estado_valida():
+    """Split retorna estado VALIDA."""
+    cartera = {"saldo": 1, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = split(cartera, "moneda1", [1])
+    assert resultado["estado"] == "VALIDA"
+
+
+def test_split_moneda_id_preservado():
+    """Split preserva el moneda_id en la transaccion."""
+    cartera = {"saldo": 10, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = split(cartera, "moneda_especial", [5, 5])
+    assert resultado["moneda_id"] == "moneda_especial"
+
+
+def test_split_cartera_no_dict_falla():
+    """Split falla si cartera no es dict."""
+    with pytest.raises(Exception):  # icontract.ViolationError
+        split("no_dict", "moneda1", [5, 5])
+
+
+def test_split_particiones_no_lista_falla():
+    """Split falla si particiones no es lista."""
+    cartera = {"saldo": 10, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    with pytest.raises(Exception):  # icontract.ViolationError
+        split(cartera, "moneda1", (5, 5))  # tuple, no list
+
+
+def test_split_particion_negativa_falla():
+    """Split falla si alguna particion es negativa."""
+    cartera = {"saldo": 10, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    with pytest.raises(Exception):  # icontract.ViolationError
+        split(cartera, "moneda1", [5, -5])
+
+
+def test_split_particion_cero_falla():
+    """Split falla si alguna particion es cero."""
+    cartera = {"saldo": 10, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    with pytest.raises(Exception):  # icontract.ViolationError
+        split(cartera, "moneda1", [0, 10])
+
+
+# ============= TESTS VALIDACION SPLIT =============
+
+def test_validar_transaccion_split_valida(par_claves):
+    """Split valida pasa validacion: entrada = salida, impuesto = 0."""
+    origen = par_claves["publica"]
+    transaccion = {
+        "tipo": "SPLIT",
+        "origen": origen,
+        "moneda_id": "m1",
+        "monedas_entrada": [{"valor": 100}],
+        "monedas_salida": [{"valor": 30}, {"valor": 70}],
+        "impuesto": 0,
+        "estado": "PENDIENTE",
+    }
+    transaccion = _firmar(transaccion, par_claves["privada"])
+    estado_sistema = {"saldos": {origen: 100}}
+    assert validar_transaccion(transaccion, estado_sistema) is True
+
+
+def test_validar_transaccion_split_conservacion_falla():
+    """Split invalida: entrada != salida."""
+    transaccion = {
+        "tipo": "SPLIT",
+        "origen": "PUB_KEY_STUB_ORIGEN",
+        "moneda_id": "m1",
+        "monedas_entrada": [{"valor": 100}],
+        "monedas_salida": [{"valor": 30}, {"valor": 60}],  # Suma = 90, no 100
+        "impuesto": 0,
+        "estado": "PENDIENTE",
+    }
+    assert validar_transaccion(transaccion, {}) is False
+
+
+def test_validar_transaccion_split_con_impuesto_falla():
+    """Split invalida: no debe tener impuesto."""
+    transaccion = {
+        "tipo": "SPLIT",
+        "origen": "PUB_KEY_STUB_ORIGEN",
+        "moneda_id": "m1",
+        "monedas_entrada": [{"valor": 100}],
+        "monedas_salida": [{"valor": 30}, {"valor": 70}],
+        "impuesto": 5,  # Split no debe tener impuesto
+        "estado": "PENDIENTE",
+    }
+    assert validar_transaccion(transaccion, {}) is False
+
+
+def test_validar_transaccion_split_valor_cero_falla():
+    """Split invalida: no puede tener valor 0."""
+    transaccion = {
+        "tipo": "SPLIT",
+        "origen": "PUB_KEY_STUB_ORIGEN",
+        "moneda_id": "m1",
+        "monedas_entrada": [{"valor": 0}],
+        "monedas_salida": [],
+        "impuesto": 0,
+        "estado": "PENDIENTE",
+    }
+    assert validar_transaccion(transaccion, {}) is False
 
 
 def test_merge_conservacion_valor():

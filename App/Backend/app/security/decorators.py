@@ -86,7 +86,11 @@ def auditar(func: Callable) -> Callable:
             from flask import has_app_context
             if has_app_context():
                 usuario_id = obtener_usuario_id()
-                registrar_operacion_auditoria(usuario_id, transaccion.get("tipo", ""), "operacion registrada")
+                tipo_operacion = transaccion.get("tipo", "")
+                
+                # Extraer detalles relevantes según el tipo de operación
+                detalles = _construir_detalles_auditoria(tipo_operacion, transaccion)
+                registrar_operacion_auditoria(usuario_id, tipo_operacion, detalles)
             return transaccion
         except icontract.ViolationError as exc:
             from flask import has_app_context
@@ -95,3 +99,40 @@ def auditar(func: Callable) -> Callable:
             raise
 
     return wrapper
+
+
+def _construir_detalles_auditoria(tipo_operacion: str, transaccion: dict) -> str:
+    """Construye string de detalles según tipo de operación para auditoría."""
+    import json
+    
+    if tipo_operacion == "SPLIT":
+        moneda_id = transaccion.get("moneda_id", "N/A")
+        monedas_salida = transaccion.get("monedas_salida", [])
+        particiones = [m.get("valor", 0) for m in monedas_salida]
+        valor_total = sum(particiones)
+        estado = transaccion.get("estado", "N/A")
+        return f"Moneda: {moneda_id} | Particiones: {particiones} (Total: {valor_total}) | Estado: {estado}"
+    
+    elif tipo_operacion in ("TRANSFER", "Transferencia"):
+        monto = transaccion.get("monto", 0)
+        destino = transaccion.get("destino", "N/A")
+        impuesto = transaccion.get("impuesto", 0)
+        return f"Monto: {monto} | Impuesto: {impuesto} | Destino: {destino[:20]}..."
+    
+    elif tipo_operacion == "Recompensa":
+        monto_entrada = sum(m.get("valor", 0) for m in transaccion.get("monedas_entrada", []))
+        impuesto = transaccion.get("impuesto", 0)
+        return f"Monto: {monto_entrada} | Impuesto: {impuesto}"
+    
+    else:
+        # Default: intentar serializar detalles relevantes
+        try:
+            resumen = {
+                "tipo": tipo_operacion,
+                "estado": transaccion.get("estado", "N/A"),
+                "entrada": sum(m.get("valor", 0) for m in transaccion.get("monedas_entrada", [])),
+                "salida": sum(m.get("valor", 0) for m in transaccion.get("monedas_salida", []))
+            }
+            return json.dumps(resumen, ensure_ascii=False)
+        except Exception:
+            return "operacion registrada"

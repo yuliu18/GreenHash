@@ -50,11 +50,44 @@ def transferencia(origen: dict, destino_clave_publica: str, monto: int) -> dict:
 
 @icontract.require(lambda cartera, particiones: isinstance(cartera, dict) and isinstance(particiones, list))
 @icontract.require(lambda particiones: all(p > 0 for p in particiones))
-@icontract.ensure(lambda result: isinstance(result, list))
-@icontract.ensure(lambda result: _suma_valor_monedas(result) > 0)
-def split(cartera: dict, moneda_id: str, particiones: list) -> list:
-    """Operacion SPLIT (Stub para el equipo)."""
-    raise NotImplementedError("STDD: implementar en rama feature/split")
+@icontract.ensure(lambda result: isinstance(result, dict))
+@icontract.ensure(lambda result: result.get("estado") in ("VALIDA", "RECHAZADA", "PENDIENTE"))
+@icontract.ensure(
+    lambda result: _suma_valor_monedas(result.get("monedas_entrada", []))
+    == _suma_valor_monedas(result.get("monedas_salida", []))
+)
+def split(cartera: dict, moneda_id: str, particiones: list) -> dict:
+    """Operacion SPLIT: divide una moneda en multiples particiones.
+    
+    Args:
+        cartera: Cartera que contiene la moneda
+        moneda_id: Identificador de la moneda a dividir
+        particiones: Lista de valores enteros positivos a crear
+        
+    Returns:
+        Transaccion SPLIT como dict con monedas_entrada y monedas_salida
+        
+    Ejemplo:
+        split(cartera, "m1", [10, 20, 30]) -> {
+            "tipo": "SPLIT",
+            "origen": "clave_publica",
+            "moneda_id": "m1",
+            "monedas_entrada": [{"valor": 60}],
+            "monedas_salida": [{"valor": 10}, {"valor": 20}, {"valor": 30}],
+            "estado": "VALIDA"
+        }
+    """
+    monedas_salida = [{"valor": p} for p in particiones]
+    valor_total = sum(particiones)
+    
+    return {
+        "tipo": "SPLIT",
+        "origen": cartera.get("clave_publica", ""),
+        "moneda_id": moneda_id,
+        "monedas_entrada": [{"valor": valor_total}],
+        "monedas_salida": monedas_salida,
+        "estado": "VALIDA",
+    }
 
 
 @icontract.require(lambda cartera, monedas_ids: isinstance(cartera, dict) and isinstance(monedas_ids, list))
@@ -117,6 +150,14 @@ def validar_transaccion(transaccion: dict, estado_sistema: dict) -> bool:
         if impuesto != impuesto_esperado:
             return False
         if total_entrada != total_salida + impuesto:
+            return False
+    elif tipo == "split":
+        # Split: conserva valor (entrada = salida), sin impuesto
+        if total_entrada <= 0:
+            return False
+        if impuesto != 0:
+            return False
+        if total_entrada != total_salida:
             return False
     else:
         return False
