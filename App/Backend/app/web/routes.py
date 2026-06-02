@@ -331,12 +331,38 @@ def split_accion():
         return split(cartera, moneda_id, particiones)
 
     try:
-        _operacion()
-        flash("Split registrado", "success")
+        transaccion = _operacion()
+
+        # Persistencia en el ledger inmutable
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute(
+                    "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        transaccion["tipo"].upper(),
+                        transaccion.get("origen", clave_publica),
+                        transaccion.get("moneda_id", moneda_id),
+                        json.dumps(transaccion["monedas_entrada"]),
+                        json.dumps(transaccion["monedas_salida"]),
+                        transaccion.get("impuesto", 0),
+                        timestamp_str,
+                        transaccion.get("firma", ""),
+                        transaccion["estado"],
+                    ),
+                )
+            conn.commit()
+
+        n_partes = len(transaccion["monedas_salida"])
+        valor_total = sum(m["valor"] for m in transaccion["monedas_entrada"])
+        flash(f"SPLIT ejecutado: moneda '{moneda_id}' dividida en {n_partes} partes (total {valor_total} GC). Transacción registrada en el ledger.", "success")
     except NotImplementedError:
         flash("Funcionalidad no implementada todavia", "warning")
     except icontract.ViolationError as exc:
         flash(f"Infraccion de contrato: {exc}", "danger")
+    except Exception as exc:
+        flash(f"Error al registrar el split: {exc}", "danger")
     return redirect(url_for("web.billetera", tab="split"))
 
 
@@ -1156,10 +1182,10 @@ def billetera_crear():
                 )
             conn.commit()
         
-        registrar_operacion_auditoria(user_id, "Crear Billetera", f"Se creó billetera con clave pública {clave_publica[:16]}...")
-        flash("¡Billetera creada con éxito!", "success")
+        registrar_operacion_auditoria(user_id, "Crear Billetera", f"Se creó billetera con clave pública EC-SECP256R1 {clave_publica[:28]}...")
+        flash(f"¡Billetera creada con éxito! Clave pública (EC-SECP256R1): {clave_publica[:40]}...", "success")
     except NotImplementedError:
-        flash("[STDD RED STATE] 'crear_cartera()' es un stub académico. Implementa la lógica en la rama feature/wallet en wallet.py.", "warning")
+        flash("'crear_cartera()' no está implementada todavía.", "warning")
     except icontract.ViolationError as exc:
         flash(f"Infracción de contrato: {exc}", "danger")
     except Exception as exc:
