@@ -152,11 +152,11 @@
                 <input type="hidden" name="csrf_token" value="">
                 <input type="hidden" name="moneda_id" id="split-moneda-id" value="">
                 <div style="display:flex; gap:8px; align-items:center;">
-                  <input type="text" name="particiones" id="split-particiones" placeholder="Ej: 50, 50" required
-                    style="flex:1; padding:8px 12px; border:1px solid #a5d6a7; border-radius:6px; font-size:14px;">
-                  <button type="submit" class="btn-primary" style="padding:8px 18px;">Fraccionar</button>
-                </div>
-                <p style="font-size:12px; color:#777; margin-top:6px;">Ingresá los valores en GC separados por coma. Deben sumar el total de la moneda.</p>
+                <input type="text" name="particiones" id="split-particiones" placeholder="Ej: 0.50, 0.50" required
+                  style="flex:1; padding:8px 12px; border:1px solid #a5d6a7; border-radius:6px; font-size:14px;">
+                <button type="submit" class="btn-primary" style="padding:8px 18px;">Fraccionar</button>
+              </div>
+              <p style="font-size:12px; color:#777; margin-top:6px;">Ingresá los valores en GC separados por coma (ej: 0.50, 0.50). Deben sumar el total de la moneda.</p>
               </form>
             </div>
 
@@ -304,9 +304,20 @@
       }
     });
 
-  let monedasActuales = [];
+  // Persistencia en sessionStorage para sobrevivir cambios de tab/ventana
+  let monedasActuales = JSON.parse(sessionStorage.getItem('gh_monedas') || '[]');
   let seleccionadas = new Set();
-  let walletActivaId = null;
+  let walletActivaId = sessionStorage.getItem('gh_wallet_id') || null;
+
+  function guardarEstado() {
+    sessionStorage.setItem('gh_monedas', JSON.stringify(monedasActuales));
+    if (walletActivaId) sessionStorage.setItem('gh_wallet_id', walletActivaId);
+  }
+
+  function limpiarEstado() {
+    sessionStorage.removeItem('gh_monedas');
+    sessionStorage.removeItem('gh_wallet_id');
+  }
 
   // Renderiza un chip de moneda en un grid dado
   function chipHTML(m, clickable, tabPrefix) {
@@ -341,6 +352,7 @@
       .then(r => r.json())
       .then(data => {
         monedasActuales = data.monedas || [];
+        guardarEstado();
         renderizarEnTabs();
       })
       .catch(() => {
@@ -435,6 +447,11 @@
 
   // Interceptar submit de split para mostrar resultado visual
   document.addEventListener('DOMContentLoaded', () => {
+    // Restaurar monedas desde sessionStorage si existen
+    if (monedasActuales.length > 0) {
+      renderizarEnTabs();
+    }
+
     const formSplit = document.getElementById('form-split-visual');
     if (formSplit) {
       formSplit.addEventListener('submit', function(e) {
@@ -443,28 +460,30 @@
         const particionesStr = document.getElementById('split-particiones').value;
         const csrf = document.querySelector('#form-split-visual input[name=csrf_token]').value;
 
+        // Convertir GC a centavos para el backend (el usuario escribe en GC: 0.50 → 50 centavos)
+        const partesGC = particionesStr.split(',').map(p => parseFloat(p.trim())).filter(v => !isNaN(v) && v > 0);
+        const partesCentavos = partesGC.map(v => Math.round(v * 100));
+        const particionesParaBackend = partesCentavos.join(', ');
+
         const body = new URLSearchParams();
         body.append('csrf_token', csrf);
         body.append('moneda_id', monedaId);
-        body.append('particiones', particionesStr);
+        body.append('particiones', particionesParaBackend);
 
         fetch('/split', { method: 'POST', body, redirect: 'manual' })
           .then(() => {
-            // Parsear particiones para mostrar resultado inmediato
-            const partes = particionesStr.split(',').map(p => parseInt(p.trim())).filter(v => !isNaN(v) && v > 0);
-            const monedaOrig = monedasActuales.find(m => m.id === monedaId);
-
-            // Mostrar resultado visual
+            // Mostrar resultado en GC (centavos ya calculados)
             const resDiv = document.getElementById('resultado-split');
             const resGrid = document.getElementById('grid-resultado-split');
             resDiv.style.display = 'block';
-            resGrid.innerHTML = partes.map((v, i) => chipHTML(
+            resGrid.innerHTML = partesCentavos.map((v, i) => chipHTML(
               { id: monedaId + '-P' + (i+1), valor: v }, false, 'res'
             )).join('');
 
-            // Quitar la moneda original del grid y agregar las hijas
+            // Actualizar estado y persistir
             monedasActuales = monedasActuales.filter(m => m.id !== monedaId);
-            partes.forEach((v, i) => monedasActuales.push({ id: monedaId + '-P' + (i+1), valor: v }));
+            partesCentavos.forEach((v, i) => monedasActuales.push({ id: monedaId + '-P' + (i+1), valor: v }));
+            guardarEstado();
             seleccionadas.clear();
             renderizarEnTabs();
             actualizarAcciones();
@@ -498,9 +517,10 @@
             resDiv.style.display = 'block';
             resGrid.innerHTML = chipHTML({ id: nuevoId, valor: totalValor }, false, 'res');
 
-            // Actualizar estado de monedas
+            // Actualizar estado de monedas y persistir
             monedasActuales = monedasActuales.filter(m => !selArr.includes(m.id));
             monedasActuales.push({ id: nuevoId, valor: totalValor });
+            guardarEstado();
             seleccionadas.clear();
             renderizarEnTabs();
             actualizarAcciones();
