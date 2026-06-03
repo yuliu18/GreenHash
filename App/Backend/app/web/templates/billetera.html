@@ -313,14 +313,19 @@
       }
     });
 
-  // Persistencia en sessionStorage para sobrevivir cambios de tab/ventana
-  let monedasActuales = JSON.parse(sessionStorage.getItem('gh_monedas') || '[]');
+  // Persistencia en sessionStorage — cacheado por wallet_id + suma para detectar cambios externos
+  const _cachedWalletId = sessionStorage.getItem('gh_wallet_id');
+  const _primeraWalletId = '{{ wallets_list[0].id if wallets_list else "" }}';
+  // Invalidar si cambió el wallet activo (ej: otro usuario logueado en mismo browser)
+  let monedasActuales = (_cachedWalletId === _primeraWalletId)
+    ? JSON.parse(sessionStorage.getItem('gh_monedas') || '[]')
+    : [];
   let seleccionadas = new Set();
-  let walletActivaId = sessionStorage.getItem('gh_wallet_id') || null;
+  let walletActivaId = _primeraWalletId || null;
 
   function guardarEstado() {
     sessionStorage.setItem('gh_monedas', JSON.stringify(monedasActuales));
-    if (walletActivaId) sessionStorage.setItem('gh_wallet_id', walletActivaId);
+    sessionStorage.setItem('gh_wallet_id', walletActivaId || '');
   }
 
   function limpiarEstado() {
@@ -465,12 +470,34 @@
     if (div) div.style.display = 'none';
   }
 
-  // Carga automática desde la primera wallet disponible
+  // Carga automática: pide monedas frescas al servidor y compara suma con caché
+  // Si el saldo en BD cambió (admin fundeo, reciclaje, compra), invalida y muestra el nuevo estado
   function cargarMonedasPrimeraWallet() {
-    const primerWalletId = {{ wallets_list[0].id if wallets_list else 'null' }};
-    if (!primerWalletId) return;
-    walletActivaId = String(primerWalletId);
-    cargarMonedas(walletActivaId);
+    if (!walletActivaId) return;
+
+    const csrf = document.querySelector('input[name=csrf_token]')?.value || '';
+    const formData = new FormData();
+    formData.append('csrf_token', csrf);
+    formData.append('wallet_id', walletActivaId);
+
+    fetch('/billetera/monedas', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(data => {
+        const monedasServidor = data.monedas || [];
+        const sumaServidor = monedasServidor.reduce((a, m) => a + m.valor, 0);
+        const sumaCached  = monedasActuales.reduce((a, m) => a + m.valor, 0);
+
+        if (monedasActuales.length > 0 && sumaCached === sumaServidor) {
+          renderizarEnTabs();         // caché sincronizado, reutilizar IDs existentes
+        } else {
+          monedasActuales = monedasServidor;  // saldo cambió externamente → usar los del servidor
+          guardarEstado();
+          renderizarEnTabs();
+        }
+      })
+      .catch(() => {
+        if (monedasActuales.length > 0) renderizarEnTabs();
+      });
   }
 
   // Toast emergente de resultado
