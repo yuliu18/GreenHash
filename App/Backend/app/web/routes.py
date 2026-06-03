@@ -275,6 +275,21 @@ def transferir_accion():
                     "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
                     (monto_transferencia, transaccion["destino"])
                 )
+                # C3/W2: Envía la tasa de impuesto de transferencias (2%) a la cuenta de tesorería del sistema ('admin@greenhash.eco')
+                impuesto = transaccion.get("impuesto", 0)
+                if impuesto > 0:
+                    cur.execute(
+                        "SELECT w.clave_publica FROM wallets w "
+                        "JOIN usuarios u ON w.usuario_id = u.id "
+                        "WHERE u.email = %s",
+                        ("admin@greenhash.eco",)
+                    )
+                    admin_row = cur.fetchone()
+                    if admin_row:
+                        cur.execute(
+                            "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
+                            (impuesto, admin_row["clave_publica"])
+                        )
                 # Registrar en el ledger inmutable
                 import json
                 import datetime
@@ -340,7 +355,7 @@ def split_accion():
     current_user, saldo_actual, clave_publica = get_current_user_wallet_details()
     cartera = {
         "clave_publica": clave_publica,
-        "saldo": saldo_actual,
+        "saldo": int(saldo_actual * 100),
         "nombre_completo": current_user["nombreCompleto"] if current_user else "Usuario"
     }
     moneda_id = request.form.get("moneda_id", "").strip()
@@ -370,6 +385,18 @@ def split_accion():
         # Persistencia en el ledger inmutable
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # C3: Descontar y acreditar para asegurar consistencia del saldo en centavos
+                valor_entrada = sum(m["valor"] for m in transaccion["monedas_entrada"])
+                valor_salida = sum(m["valor"] for m in transaccion["monedas_salida"])
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo - %s WHERE clave_publica = %s",
+                    (valor_entrada, transaccion["origen"])
+                )
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
+                    (valor_salida, transaccion["origen"])
+                )
+                
                 timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 cur.execute(
                     "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
@@ -390,7 +417,7 @@ def split_accion():
 
         n_partes = len(transaccion["monedas_salida"])
         valor_total = sum(m["valor"] for m in transaccion["monedas_entrada"])
-        flash(f"SPLIT ejecutado: moneda '{moneda_id}' dividida en {n_partes} partes (total {valor_total} GC). Transacción registrada en el ledger.", "success")
+        flash(f"SPLIT ejecutado: moneda '{moneda_id}' dividida en {n_partes} partes (total {valor_total / 100:.2f} GC). Transacción registrada en el ledger.", "success")
     except NotImplementedError:
         flash("Funcionalidad no implementada todavia", "warning")
     except icontract.ViolationError as exc:
@@ -449,6 +476,18 @@ def merge_accion():
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # C3: Descontar y acreditar para asegurar consistencia del saldo en centavos
+                valor_entrada = sum(m["valor"] for m in transaccion["monedas_entrada"])
+                valor_salida = sum(m["valor"] for m in transaccion["monedas_salida"])
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo - %s WHERE clave_publica = %s",
+                    (valor_entrada, transaccion["origen"])
+                )
+                cur.execute(
+                    "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
+                    (valor_salida, transaccion["origen"])
+                )
+                
                 timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 cur.execute(
                     "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
@@ -470,7 +509,7 @@ def merge_accion():
         moneda_resultado = transaccion["monedas_salida"][0]
         flash(
             f"MERGE ejecutado: {len(monedas_ids)} monedas fusionadas en '{moneda_resultado['id']}' "
-            f"(total {moneda_resultado['valor']} ¢). Transacción registrada en el ledger.",
+            f"(total {moneda_resultado['valor'] / 100:.2f} GC). Transacción registrada en el ledger.",
             "success"
         )
     except icontract.ViolationError as exc:
@@ -836,7 +875,7 @@ def fundear_wallet():
         return jsonify({"status": "danger", "message": "Datos incompletos para cargar saldo"}), 400
         
     try:
-        monto = int(monto_str)
+        monto = int(monto_str) * 100
         if monto <= 0:
             return jsonify({"status": "danger", "message": "El monto a cargar debe ser positivo"}), 400
             
@@ -855,12 +894,12 @@ def fundear_wallet():
                 registrar_operacion_auditoria(
                     user_id,
                     "Carga Administrativa",
-                    f"Cargó administrativamente {monto} GC a la billetera de '{username}' (Billetera ID: {wallet_id})"
+                    f"Cargó administrativamente {monto / 100:.2f} GC a la billetera de '{username}' (Billetera ID: {wallet_id})"
                 )
             conn.commit()
             return jsonify({
                 "status": "success",
-                "message": f"¡Carga de {monto} GC a '{username}' realizada con éxito!",
+                "message": f"¡Carga de {monto / 100:.2f} GC a '{username}' realizada con éxito!",
                 "wallet_id": wallet_id,
                 "nuevo_saldo": nuevo_saldo
             })
@@ -878,7 +917,7 @@ def gestion_catalogo():
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, material, precio FROM catalogo_recompensas ORDER BY material")
+                cur.execute("SELECT id, material, precio/100.0 as precio FROM catalogo_recompensas ORDER BY material")
                 cat_rows = cur.fetchall()
                 for cr in cat_rows:
                     catalogo_items.append({
@@ -990,6 +1029,9 @@ def ayuda():
 @web_bp.get("/reciclar")
 @requiere_rol("usuario")
 def reciclar_form():
+    if es_billetera_congelada():
+        flash("⚠️ Operación rechazada: Tu billetera se encuentra CONGELADA temporalmente por auditoría de cumplimiento (DSM 3).", "danger")
+        return redirect(url_for("web.dashboard"))
     current_user, saldo_actual = get_current_user_and_balance()
     return render_template("reciclar.html", current_user=current_user, saldo_actual=saldo_actual)
 
@@ -1000,6 +1042,10 @@ def reciclar_accion():
     if not _csrf_validar():
         flash("Token CSRF invalido", "danger")
         return redirect(url_for("web.reciclar_form"))
+
+    if es_billetera_congelada():
+        flash("⚠️ Operación rechazada: Tu billetera se encuentra CONGELADA temporalmente por auditoría de cumplimiento (DSM 3).", "danger")
+        return redirect(url_for("web.dashboard"))
     
     from app.core.rewards import registrar_recompensa_reciclaje
     from app.security.decorators import auditar, validar, firmar
@@ -1289,15 +1335,20 @@ def billetera_crear():
         
         # Insertar la wallet en BD con los datos devueltos por el stub
         clave_publica = cartera.get("clave_publica", secrets.token_urlsafe(32))
+        clave_privada = cartera.get("clave_privada")
         saldo = cartera.get("saldo", 0)
         
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO wallets (usuario_id, clave_publica, saldo) VALUES (%s, %s, %s)",
-                    (user_id, clave_publica, saldo)
+                    "INSERT INTO wallets (usuario_id, clave_publica, clave_privada, saldo) VALUES (%s, %s, %s, %s)",
+                    (user_id, clave_publica, clave_privada, saldo)
                 )
             conn.commit()
+        
+        if clave_privada:
+            session[f"priv_key_{clave_publica}"] = clave_privada
+            session["clave_privada"] = clave_privada
         
         import hashlib as _hl
         pk_alias = "PK-" + _hl.sha256(clave_publica.encode()).hexdigest()[:6].upper()

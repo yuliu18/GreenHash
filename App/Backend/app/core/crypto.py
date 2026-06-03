@@ -32,14 +32,24 @@ def firmar_transaccion(transaccion: dict, clave_privada: str) -> str:
             clave_privada.encode("utf-8"),
             password=None
         )
-        signature = priv_key.sign(
-            datos,
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
-            ),
-            hashes.SHA256()
-        )
+        
+        from cryptography.hazmat.primitives.asymmetric import ec as ec_module
+        if isinstance(priv_key, ec_module.EllipticCurvePrivateKey):
+            # Claves elípticas usan firma ECDSA
+            signature = priv_key.sign(
+                datos,
+                ec_module.ECDSA(hashes.SHA256())
+            )
+        else:
+            # Claves RSA usan firma con PSS padding
+            signature = priv_key.sign(
+                datos,
+                padding.PSS(
+                    mgf=padding.MGF1(hashes.SHA256()),
+                    salt_length=padding.PSS.MAX_LENGTH
+                ),
+                hashes.SHA256()
+            )
         return signature.hex()
     except Exception as exc:
         raise icontract.ViolationError(f"Error al firmar transaccion: {exc}")
@@ -50,15 +60,21 @@ def firmar_transaccion(transaccion: dict, clave_privada: str) -> str:
 @icontract.ensure(lambda result: isinstance(result, bool))
 def verificar_firma(transaccion: dict, clave_publica: str) -> bool:
     """Verifica una firma de transaccion RSA utilizando la clave publica (PEM) o simulada."""
+    datos = _obtener_datos_canonicos(transaccion)
+    firma_hex = transaccion.get("firma")
+
+    if clave_publica.strip().startswith("PUB_KEY_STUB_"):
+        if not firma_hex:
+            return False
+        firma_esperada = hashlib.sha256(datos).hexdigest()
+        return firma_hex == firma_esperada
+
     if not clave_publica.strip().startswith("-----BEGIN"):
         # Fallback de verificacion simulada (mock) para unit tests simples
         return True
         
-    firma_hex = transaccion.get("firma")
     if not firma_hex:
         return False
-
-    datos = _obtener_datos_canonicos(transaccion)
 
     # Si la firma tiene 64 chars hex es SHA256 simulado (fallback del decorador @firmar)
     # En el demo académico la clave privada no se persiste en BD, así que el decorador
