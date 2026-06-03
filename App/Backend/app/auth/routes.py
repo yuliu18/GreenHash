@@ -54,9 +54,10 @@ def registrar_usuario():
                 )
                 user_id = cursor.lastrowid
                 
-                # 3. Crear automáticamente su billetera inicial (saldada a 0 GC y activa)
-                # Esto garantiza que aparezca de inmediato en la administración (Control Billeteras)
-                pub_key = f"PUB_KEY_STUB_{user_id}_{nombre.replace(' ', '')}"
+                # 3. Crear automáticamente su billetera con clave EC-SECP256R1 real
+                from app.core.wallet import crear_cartera
+                cartera = crear_cartera(nombre)
+                pub_key = cartera["clave_publica"]
                 cursor.execute(
                     "INSERT INTO wallets (usuario_id, clave_publica, saldo, estado) VALUES (%s, %s, 0, 'ACTIVA')",
                     (user_id, pub_key)

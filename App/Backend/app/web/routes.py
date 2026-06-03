@@ -1221,7 +1221,7 @@ def billetera():
                 cur.execute(
                     "SELECT w.id, w.saldo, w.clave_publica, w.creado_en "
                     "FROM wallets w WHERE w.usuario_id = %s "
-                    "ORDER BY w.creado_en DESC",
+                    "ORDER BY w.creado_en ASC",
                     (user_id,)
                 )
                 rows = cur.fetchall()

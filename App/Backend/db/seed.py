@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from app import create_app
 from app.db import get_db_connection
 from app.auth.helpers import hash_password
+from app.core.wallet import crear_cartera
 
 USUARIOS_DEMO = [
     {"nombre": "DidactionCoin", "email": "DidactionCoin@green.es", "pwd": "DidactionCoin", "rol": "usuario"},
@@ -61,8 +62,9 @@ def seed_database():
                     )
                     user_id = cursor.lastrowid
                     
-                    # Crear wallet con 10.00 GreenCoins (1000 centavos) de regalo para la demo
-                    pub_key = f"PUB_KEY_STUB_{user_id}_{u['nombre']}"
+                    # Crear wallet con clave EC-SECP256R1 real y 10.00 GreenCoins (1000 centavos)
+                    cartera = crear_cartera(u["nombre"])
+                    pub_key = cartera["clave_publica"]
                     cursor.execute(
                         "INSERT INTO wallets (usuario_id, clave_publica, saldo) VALUES (%s, %s, %s)",
                         (user_id, pub_key, 1000)
