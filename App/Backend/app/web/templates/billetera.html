@@ -156,7 +156,8 @@
                   style="flex:1; padding:8px 12px; border:1px solid #a5d6a7; border-radius:6px; font-size:14px;">
                 <button type="submit" class="btn-primary" style="padding:8px 18px;">Fraccionar</button>
               </div>
-              <p style="font-size:12px; color:#777; margin-top:6px;">Ingresá los valores en GC separados por coma (ej: 0.50, 0.50). Deben sumar el total de la moneda.</p>
+              <div id="error-split" style="display:none; margin-top:8px; padding:8px 12px; background:#ffebee; border:1px solid #ef9a9a; border-radius:6px; color:#c62828; font-size:12px;"></div>
+              <p style="font-size:12px; color:#777; margin-top:6px;">Ingresá los valores en GC separados por coma (ej: 0.50, 0.50). Deben sumar exactamente el total de la moneda (@ensure conservación de valor).</p>
               </form>
             </div>
 
@@ -446,6 +447,16 @@
   }
 
   // Interceptar submit de split para mostrar resultado visual
+  function mostrarErrorSplit(msg) {
+    const div = document.getElementById('error-split');
+    if (div) { div.textContent = msg; div.style.display = 'block'; }
+  }
+
+  function ocultarErrorSplit() {
+    const div = document.getElementById('error-split');
+    if (div) div.style.display = 'none';
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     // Restaurar monedas desde sessionStorage si existen
     if (monedasActuales.length > 0) {
@@ -463,8 +474,25 @@
         // Convertir GC a centavos para el backend (el usuario escribe en GC: 0.50 → 50 centavos)
         const partesGC = particionesStr.split(',').map(p => parseFloat(p.trim())).filter(v => !isNaN(v) && v > 0);
         const partesCentavos = partesGC.map(v => Math.round(v * 100));
-        const particionesParaBackend = partesCentavos.join(', ');
 
+        // @require (DbC cliente): todas las particiones > 0
+        if (partesGC.length === 0 || partesGC.some(v => v <= 0)) {
+          mostrarErrorSplit('Todas las particiones deben ser valores positivos en GC (ej: 0.50, 0.50).');
+          return;
+        }
+
+        // @ensure (DbC cliente): suma(particiones) == valor_moneda — conservación de valor
+        const monedaOrig = monedasActuales.find(m => m.id === monedaId);
+        const valorMonedaGC = monedaOrig ? monedaOrig.valor / 100 : 0;
+        const sumaGC = partesGC.reduce((a, b) => a + b, 0);
+        if (Math.abs(sumaGC - valorMonedaGC) > 0.001) {
+          mostrarErrorSplit(
+            `La suma de las particiones (${sumaGC.toFixed(2)} GC) debe ser igual al valor de la moneda (${valorMonedaGC.toFixed(2)} GC). Conservación de valor requerida por contrato.`
+          );
+          return;
+        }
+
+        const particionesParaBackend = partesCentavos.join(', ');
         const body = new URLSearchParams();
         body.append('csrf_token', csrf);
         body.append('moneda_id', monedaId);
@@ -472,6 +500,7 @@
 
         fetch('/split', { method: 'POST', body, redirect: 'manual' })
           .then(() => {
+            ocultarErrorSplit();
             // Mostrar resultado en GC (centavos ya calculados)
             const resDiv = document.getElementById('resultado-split');
             const resGrid = document.getElementById('grid-resultado-split');
