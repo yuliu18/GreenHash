@@ -191,7 +191,7 @@ def dashboard():
 @requiere_rol("usuario")
 def transferir_form():
     current_user, saldo_actual = get_current_user_and_balance()
-    return render_template("transferir.html", current_user=current_user, saldo_actual=saldo_actual)
+    return render_template("transferir.html", current_user=current_user, saldo_actual=saldo_actual, tx_result=None)
 
 
 @web_bp.post("/transferir")
@@ -212,7 +212,9 @@ def transferir_accion():
         "saldo": int(saldo_actual * 100),
         "nombre_completo": current_user["nombreCompleto"] if current_user else "Usuario"
     }
-    destino_input = request.form.get("destino", "").strip()
+    # Normalizar la clave PEM: el textarea puede enviar \r\n (Windows) → normalizar a \n
+    # No hacer strip() total para no quitar el \n final de las claves PEM almacenadas en BD
+    destino_input = request.form.get("destino", "").replace("\r\n", "\n").replace("\r", "\n").strip()
     try:
         monto = int(float(request.form.get("monto", "0")) * 100)
     except (ValueError, TypeError):
@@ -224,11 +226,15 @@ def transferir_accion():
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Buscar por clave exacta, con o sin \n final, o por email/nombre
+                destino_con_newline = destino_input if destino_input.endswith("\n") else destino_input + "\n"
+                destino_sin_newline = destino_input.rstrip("\n")
                 cur.execute(
                     "SELECT w.clave_publica, u.nombre_completo FROM wallets w "
                     "JOIN usuarios u ON w.usuario_id = u.id "
-                    "WHERE w.clave_publica = %s OR u.email = %s OR u.nombre_completo = %s",
-                    (destino_input, destino_input, destino_input)
+                    "WHERE w.clave_publica = %s OR w.clave_publica = %s OR w.clave_publica = %s "
+                    "OR u.email = %s OR u.nombre_completo = %s",
+                    (destino_input, destino_con_newline, destino_sin_newline, destino_input, destino_input)
                 )
                 row = cur.fetchone()
                 if row:
@@ -292,7 +298,18 @@ def transferir_accion():
             
         monto_bruto_display = float(costo_total) / 100.0
         monto_neto_display = float(monto_transferencia) / 100.0
-        flash(f"Transferencia de {monto_bruto_display:.2f} GC enviada con éxito. {destino_nombre} recibió {monto_neto_display:.2f} GC (2% de impuesto deducido).", "success")
+        impuesto_display = float(transaccion["impuesto"]) / 100.0
+        current_user, saldo_actual = get_current_user_and_balance()
+        tx_result = {
+            "estado": transaccion["estado"],
+            "destino_nombre": destino_nombre,
+            "destino_clave": destino_clave_publica[:28] + "...",
+            "monto_enviado": monto_bruto_display,
+            "monto_recibido": monto_neto_display,
+            "impuesto": impuesto_display,
+            "timestamp": timestamp_str,
+        }
+        return render_template("transferir.html", current_user=current_user, saldo_actual=saldo_actual, tx_result=tx_result)
     except NotImplementedError:
         flash("Funcionalidad no implementada todavia", "warning")
     except ValueError as exc:

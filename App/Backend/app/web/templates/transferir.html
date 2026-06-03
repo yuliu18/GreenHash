@@ -18,10 +18,11 @@
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
           
           <label class="field">
-            <span class="field-label">Destinatario</span>
-            <span class="input-ico"><span class="ii">{{ macros.icon('user', size=18) }}</span>
-              <input type="text" name="destino" placeholder="Ej. Profesor" required />
-            </span>
+            <span class="field-label">Clave Pública del Destinatario</span>
+            <textarea name="destino" rows="4" placeholder="-----BEGIN PUBLIC KEY-----&#10;MFkwEwYH...&#10;-----END PUBLIC KEY-----" required
+              style="width:100%; font-family:monospace; font-size:11px; padding:10px; border:1px solid #ddd;
+                     border-radius:8px; resize:vertical; background:#fafafa; line-height:1.5;"></textarea>
+            <span class="field-hint">Pegá la clave pública PEM del destinatario (la encontrás en su sección Billetera).</span>
           </label>
           <label class="field">
             <span class="field-label">Cantidad (GC)</span>
@@ -40,11 +41,52 @@
 
       <div class="card status-card">
         <div class="card-head"><h3>Estado de la Transacción</h3></div>
-        <div class="status-idle">
-          <span class="status-coin">{{ macros.icon('send', size=30) }}</span>
-          <strong>En espera</strong>
-          <p>Completa el formulario y confirma para ver el resumen de tu transferencia.</p>
-        </div>
+
+        {% if tx_result %}
+          <!-- Transferencia ejecutada -->
+          <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding: 12px 0 20px;">
+            <div style="width:56px; height:56px; border-radius:50%; background:#e8f5e9; display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+              <span style="font-size:26px;">✅</span>
+            </div>
+            <strong style="font-size:16px; color:#1b5e20; margin-bottom:4px;">Transferencia Enviada</strong>
+            <span style="font-size:12px; color:#888; margin-bottom:20px;">{{ tx_result.timestamp }}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0;">
+              <span style="color:#777;">Destinatario</span>
+              <span style="font-weight:600; color:#333;">{{ tx_result.destino_nombre }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0;">
+              <span style="color:#777;">Clave pública</span>
+              <span style="font-family:monospace; font-size:11px; color:#555; word-break:break-all; text-align:right; max-width:160px;">{{ tx_result.destino_clave }}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0;">
+              <span style="color:#777;">Monto enviado</span>
+              <span style="font-weight:600; color:#c62828;">-{{ "%.2f"|format(tx_result.monto_enviado) }} GC</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0;">
+              <span style="color:#777;">Impuesto (2%)</span>
+              <span style="color:#888;">{{ "%.2f"|format(tx_result.impuesto) }} GC</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0;">
+              <span style="color:#777;">Destinatario recibe</span>
+              <span style="font-weight:600; color:#1b5e20;">{{ "%.2f"|format(tx_result.monto_recibido) }} GC</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:10px 12px; background:#e8f5e9; border-radius:8px; margin-top:4px;">
+              <span style="color:#2e7d32; font-weight:600;">Estado</span>
+              <span style="color:#2e7d32; font-weight:700;">{{ tx_result.estado }} ✓</span>
+            </div>
+          </div>
+
+        {% else %}
+          <!-- En espera -->
+          <div class="status-idle">
+            <span class="status-coin">{{ macros.icon('send', size=30) }}</span>
+            <strong>En espera</strong>
+            <p>Completa el formulario y confirma para ver el resumen de tu transferencia.</p>
+          </div>
+        {% endif %}
+
       </div>
     </div>
   </div>
