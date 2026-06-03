@@ -1193,6 +1193,12 @@ def historial():
                     elif tipo_upper == "RECOMPENSA":
                         desc = "Recompensa por reciclaje"
                         amount = val
+                    elif tipo_upper == "SPLIT":
+                        desc = f"Fraccionamiento (Split) de {r['destino']}"
+                        amount = 0.0
+                    elif tipo_upper == "MERGE":
+                        desc = "Fusión (Merge) de monedas"
+                        amount = 0.0
                     else:
                         if rol == "admin":
                             # Para el admin, mostrar direcciones resumidas para mayor legibilidad
