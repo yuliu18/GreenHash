@@ -168,8 +168,16 @@ def validar_transaccion(transaccion: dict, estado_sistema: dict) -> bool:
             return False
         if total_entrada != total_salida + impuesto:
             return False
-    elif tipo == "split":
+    elif tipo in ("split", "SPLIT"):
         # Split: conserva valor (entrada = salida), sin impuesto
+        if total_entrada <= 0:
+            return False
+        if impuesto != 0:
+            return False
+        if total_entrada != total_salida:
+            return False
+    elif tipo in ("merge", "MERGE"):
+        # Merge: conserva valor (entrada = salida), sin impuesto
         if total_entrada <= 0:
             return False
         if impuesto != 0:
