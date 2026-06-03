@@ -80,7 +80,7 @@ pre {
         <div class="metrics-title">
             Metrics:<br>
         </div>
-        Total lines of code: <span id="loc">1421</span><br>
+        Total lines of code: <span id="loc">2125</span><br>
         Total lines skipped (#nosec): <span id="nosec">0</span>
     </div>
 </div>
@@ -99,15 +99,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/core/rewards.py" target="_blank">app/core/rewards.py</a><br>
-    <b>Line number: </b>35<br>
+    <b>Line number: </b>59<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-34	                        return int(row[&quot;precio&quot;])
-35	        except Exception:
-36	            pass
-37	
+58	                        return int(row[&quot;precio&quot;])
+59	        except Exception:
+60	            pass
+61	
 </pre>
 </div>
 
@@ -123,15 +123,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/core/rewards.py" target="_blank">app/core/rewards.py</a><br>
-    <b>Line number: </b>62<br>
+    <b>Line number: </b>86<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-61	                connection.commit()
-62	        except Exception:
-63	            pass
-64	
+85	                connection.commit()
+86	        except Exception:
+87	            pass
+88	
 </pre>
 </div>
 
@@ -146,16 +146,16 @@ pre {
     <b>Severity: </b>LOW<br>
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
-    <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>69<br>
+    <b>File: </b><a href="app/security/decorators.py" target="_blank">app/security/decorators.py</a><br>
+    <b>Line number: </b>66<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-68	                    return True
-69	    except Exception:
-70	        pass
-71	    return False
+65	                                    clave_privada = row[&quot;clave_privada&quot;]
+66	                    except Exception:
+67	                        pass
+68	                if not clave_privada:
 </pre>
 </div>
 
@@ -170,16 +170,16 @@ pre {
     <b>Severity: </b>LOW<br>
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
-    <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>166<br>
+    <b>File: </b><a href="app/security/decorators.py" target="_blank">app/security/decorators.py</a><br>
+    <b>Line number: </b>105<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-165	                        })
-166	        except Exception:
-167	            pass
-168	
+104	                                estado_sistema[&quot;saldos&quot;][row[&quot;clave_publica&quot;]] = row[&quot;saldo&quot;]
+105	                except Exception:
+106	                    pass
+107	
 </pre>
 </div>
 
@@ -195,15 +195,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>329<br>
+    <b>Line number: </b>70<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-328	                    })
-329	    except Exception:
-330	        pass
-331	
+69	                    return True
+70	    except Exception:
+71	        pass
+72	    return False
 </pre>
 </div>
 
@@ -219,15 +219,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>460<br>
+    <b>Line number: </b>167<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-459	                    })
-460	    except Exception:
-461	        pass
-462	
+166	                        })
+167	        except Exception:
+168	            pass
+169	            
 </pre>
 </div>
 
@@ -243,15 +243,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>531<br>
+    <b>Line number: </b>225<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-530	                    })
-531	    except Exception:
-532	        pass
-533	
+224	                        })
+225	        except Exception:
+226	            pass
+227	
 </pre>
 </div>
 
@@ -267,15 +267,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>699<br>
+    <b>Line number: </b>293<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-698	                    })
-699	    except Exception:
-700	        pass
-701	    return render_template(
+292	                    destino_nombre = row[&quot;nombre_completo&quot;]
+293	    except Exception:
+294	        pass
+295	
 </pre>
 </div>
 
@@ -291,15 +291,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>732<br>
+    <b>Line number: </b>602<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-731	                    })
-732	    except Exception:
-733	        pass
-734	    return render_template(
+601	                    })
+602	    except Exception:
+603	        pass
+604	
 </pre>
 </div>
 
@@ -315,15 +315,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>825<br>
+    <b>Line number: </b>739<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-824	                    cartera = {&quot;saldo&quot;: int(wallet[&quot;saldo&quot;]), &quot;clave_publica&quot;: wallet[&quot;clave_publica&quot;]}
-825	    except Exception:
-826	        pass
-827	    
+738	                    })
+739	    except Exception:
+740	        pass
+741	
 </pre>
 </div>
 
@@ -339,15 +339,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>836<br>
+    <b>Line number: </b>810<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-835	                    catalogo[row[&quot;material&quot;]] = int(row[&quot;precio&quot;])
-836	    except Exception:
-837	        pass
-838	
+809	                    })
+810	    except Exception:
+811	        pass
+812	
 </pre>
 </div>
 
@@ -363,15 +363,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>927<br>
+    <b>Line number: </b>978<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-926	                    })
-927	    except Exception:
-928	        pass
-929	
+977	                    })
+978	    except Exception:
+979	        pass
+980	    return render_template(
 </pre>
 </div>
 
@@ -387,15 +387,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>962<br>
+    <b>Line number: </b>1014<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-961	                    })
-962	    except Exception:
-963	        pass
-964	
+1013	                    })
+1014	    except Exception:
+1015	        pass
+1016	    return render_template(
 </pre>
 </div>
 
@@ -411,15 +411,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>991<br>
+    <b>Line number: </b>1121<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-990	                    nombre = row[&quot;nombre_completo&quot;]
-991	    except Exception:
-992	        pass
-993	    
+1120	                    cartera = {&quot;saldo&quot;: int(wallet[&quot;saldo&quot;]), &quot;clave_publica&quot;: wallet[&quot;clave_publica&quot;]}
+1121	    except Exception:
+1122	        pass
+1123	    
 </pre>
 </div>
 
@@ -435,15 +435,15 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>1040<br>
+    <b>Line number: </b>1132<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-1039	                    cartera = {&quot;saldo&quot;: int(row[&quot;saldo&quot;]), &quot;clave_publica&quot;: row[&quot;clave_publica&quot;]}
-1040	    except Exception:
-1041	        pass
-1042	    
+1131	                    catalogo[row[&quot;material&quot;]] = int(row[&quot;precio&quot;])
+1132	    except Exception:
+1133	        pass
+1134	
 </pre>
 </div>
 
@@ -459,15 +459,135 @@ pre {
     <b>Confidence: </b>HIGH<br>
     <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
     <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
-    <b>Line number: </b>1087<br>
+    <b>Line number: </b>1281<br>
     <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
 
 <div class="code">
 <pre>
-1086	                    cartera = {&quot;saldo&quot;: int(row[&quot;saldo&quot;]), &quot;clave_publica&quot;: row[&quot;clave_publica&quot;]}
-1087	    except Exception:
-1088	        pass
-1089	    
+1280	                    })
+1281	    except Exception:
+1282	        pass
+1283	
+</pre>
+</div>
+
+
+</div>
+</div>
+
+<div id="issue-16">
+<div class="issue-block issue-sev-low">
+    <b>try_except_pass: </b> Try, Except, Pass detected.<br>
+    <b>Test ID:</b> B110<br>
+    <b>Severity: </b>LOW<br>
+    <b>Confidence: </b>HIGH<br>
+    <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
+    <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
+    <b>Line number: </b>1313<br>
+    <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
+
+<div class="code">
+<pre>
+1312	                    saldo_raw = int(row[&quot;saldo&quot;])
+1313	    except Exception:
+1314	        pass
+1315	
+</pre>
+</div>
+
+
+</div>
+</div>
+
+<div id="issue-17">
+<div class="issue-block issue-sev-low">
+    <b>try_except_pass: </b> Try, Except, Pass detected.<br>
+    <b>Test ID:</b> B110<br>
+    <b>Severity: </b>LOW<br>
+    <b>Confidence: </b>HIGH<br>
+    <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
+    <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
+    <b>Line number: </b>1357<br>
+    <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
+
+<div class="code">
+<pre>
+1356	                    })
+1357	    except Exception:
+1358	        pass
+1359	
+</pre>
+</div>
+
+
+</div>
+</div>
+
+<div id="issue-18">
+<div class="issue-block issue-sev-low">
+    <b>try_except_pass: </b> Try, Except, Pass detected.<br>
+    <b>Test ID:</b> B110<br>
+    <b>Severity: </b>LOW<br>
+    <b>Confidence: </b>HIGH<br>
+    <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
+    <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
+    <b>Line number: </b>1386<br>
+    <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
+
+<div class="code">
+<pre>
+1385	                    nombre = row[&quot;nombre_completo&quot;]
+1386	    except Exception:
+1387	        pass
+1388	    
+</pre>
+</div>
+
+
+</div>
+</div>
+
+<div id="issue-19">
+<div class="issue-block issue-sev-low">
+    <b>try_except_pass: </b> Try, Except, Pass detected.<br>
+    <b>Test ID:</b> B110<br>
+    <b>Severity: </b>LOW<br>
+    <b>Confidence: </b>HIGH<br>
+    <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
+    <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
+    <b>Line number: </b>1442<br>
+    <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
+
+<div class="code">
+<pre>
+1441	                    cartera = {&quot;saldo&quot;: int(row[&quot;saldo&quot;]), &quot;clave_publica&quot;: row[&quot;clave_publica&quot;]}
+1442	    except Exception:
+1443	        pass
+1444	    
+</pre>
+</div>
+
+
+</div>
+</div>
+
+<div id="issue-20">
+<div class="issue-block issue-sev-low">
+    <b>try_except_pass: </b> Try, Except, Pass detected.<br>
+    <b>Test ID:</b> B110<br>
+    <b>Severity: </b>LOW<br>
+    <b>Confidence: </b>HIGH<br>
+    <b>CWE: </b><a href="https://cwe.mitre.org/data/definitions/703.html" target="_blank">CWE-703</a><br>
+    <b>File: </b><a href="app/web/routes.py" target="_blank">app/web/routes.py</a><br>
+    <b>Line number: </b>1492<br>
+    <b>More info: </b><a href="https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html" target="_blank">https://bandit.readthedocs.io/en/1.7.9/plugins/b110_try_except_pass.html</a><br>
+
+<div class="code">
+<pre>
+1491	                    cartera = {&quot;saldo&quot;: int(row[&quot;saldo&quot;]), &quot;clave_publica&quot;: row[&quot;clave_publica&quot;]}
+1492	    except Exception:
+1493	        pass
+1494	    
 </pre>
 </div>
 
