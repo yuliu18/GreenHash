@@ -198,9 +198,11 @@ def test_validar_transaccion_split_valor_cero_falla():
 
 
 def test_merge_conservacion_valor():
-    cartera = {"saldo": 10}
-    with pytest.raises(NotImplementedError):
-        merge(cartera, ["m1", "m2"])
+    cartera = {"saldo": 10, "clave_publica": "PUB_KEY_STUB_ORIGEN"}
+    resultado = merge(cartera, ["moneda1", "moneda2"], [3, 7])
+    suma_salida = sum(m["valor"] for m in resultado["monedas_salida"])
+    suma_entrada = sum(m["valor"] for m in resultado["monedas_entrada"])
+    assert suma_salida == suma_entrada
 
 
 @pytest.fixture(scope="module")

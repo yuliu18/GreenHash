@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 import json
 import datetime
+import uuid
 
 import icontract
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -403,24 +404,63 @@ def merge_accion():
     current_user, saldo_actual, clave_publica = get_current_user_wallet_details()
     cartera = {
         "clave_publica": clave_publica,
-        "saldo": saldo_actual,
+        "saldo": int(saldo_actual * 100),
         "nombre_completo": current_user["nombreCompleto"] if current_user else "Usuario"
     }
-    monedas_ids = [m.strip() for m in request.form.get("monedas_ids", "").split(",") if m.strip()]
+
+    monedas_ids = request.form.getlist("monedas_ids[]")
+    valores_raw = request.form.getlist("valores[]")
+
+    if len(monedas_ids) < 2:
+        flash("Debes seleccionar al menos 2 monedas para fusionar.", "danger")
+        return redirect(url_for("web.billetera", tab="merge"))
+
+    try:
+        valores = [int(v) for v in valores_raw]
+    except (ValueError, TypeError):
+        flash("Valores de monedas invalidos.", "danger")
+        return redirect(url_for("web.billetera", tab="merge"))
 
     @auditar
     @validar
     @firmar
     def _operacion():
-        return merge(cartera, monedas_ids)
+        return merge(cartera, monedas_ids, valores)
 
     try:
-        _operacion()
-        flash("Merge registrado", "success")
-    except NotImplementedError:
-        flash("Funcionalidad no implementada todavia", "warning")
+        transaccion = _operacion()
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute(
+                    "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        transaccion["tipo"].upper(),
+                        transaccion.get("origen", clave_publica),
+                        transaccion.get("origen", clave_publica),
+                        json.dumps(transaccion["monedas_entrada"]),
+                        json.dumps(transaccion["monedas_salida"]),
+                        transaccion.get("impuesto", 0),
+                        timestamp_str,
+                        transaccion.get("firma", ""),
+                        transaccion["estado"],
+                    ),
+                )
+            conn.commit()
+
+        moneda_resultado = transaccion["monedas_salida"][0]
+        flash(
+            f"MERGE ejecutado: {len(monedas_ids)} monedas fusionadas en '{moneda_resultado['id']}' "
+            f"(total {moneda_resultado['valor']} ¢). Transacción registrada en el ledger.",
+            "success"
+        )
     except icontract.ViolationError as exc:
         flash(f"Infraccion de contrato: {exc}", "danger")
+    except Exception as exc:
+        flash(f"Error al registrar el merge: {exc}", "danger")
+
     return redirect(url_for("web.billetera", tab="merge"))
 
 
@@ -1125,6 +1165,47 @@ def historial():
         saldo_actual=saldo_actual,
         transacciones=transacciones
     )
+
+
+@web_bp.post("/billetera/monedas")
+@requiere_rol("usuario")
+def obtener_monedas_virtuales():
+    from flask import jsonify
+    if not _csrf_validar():
+        return jsonify({"status": "danger", "message": "Token CSRF invalido"}), 400
+
+    user_id = obtener_usuario_id()
+    wallet_id = request.form.get("wallet_id", "")
+
+    saldo_raw = 0
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT saldo FROM wallets WHERE id = %s AND usuario_id = %s",
+                    (wallet_id, user_id)
+                )
+                row = cur.fetchone()
+                if row:
+                    saldo_raw = int(row["saldo"])
+    except Exception:
+        pass
+
+    if saldo_raw <= 0:
+        return jsonify({"status": "ok", "monedas": []})
+
+    monedas = []
+    restante = saldo_raw
+    fragmento = 100  # 1 GC = 100 centavos
+    while restante > 0:
+        valor = min(restante, fragmento)
+        monedas.append({
+            "id": f"GH-{uuid.uuid4().hex[:4].upper()}",
+            "valor": valor
+        })
+        restante -= valor
+
+    return jsonify({"status": "ok", "monedas": monedas})
 
 
 @web_bp.get("/billetera")

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import icontract
 
 from app.core.contracts import (
@@ -90,13 +92,28 @@ def split(cartera: dict, moneda_id: str, particiones: list) -> dict:
     }
 
 
-@icontract.require(lambda cartera, monedas_ids: isinstance(cartera, dict) and isinstance(monedas_ids, list))
-@icontract.require(lambda monedas_ids: len(monedas_ids) > 0)
+@icontract.require(lambda cartera, monedas_ids, valores: isinstance(cartera, dict) and isinstance(monedas_ids, list) and isinstance(valores, list))
+@icontract.require(lambda monedas_ids: len(monedas_ids) >= 2)
+@icontract.require(lambda monedas_ids, valores: len(monedas_ids) == len(valores))
+@icontract.require(lambda valores: all(v > 0 for v in valores))
 @icontract.ensure(lambda result: isinstance(result, dict))
-@icontract.ensure(lambda result: int(result.get("valor", 0)) >= 0)
-def merge(cartera: dict, monedas_ids: list) -> dict:
-    """Operacion MERGE (Stub para el equipo)."""
-    raise NotImplementedError("STDD: implementar en rama feature/merge")
+@icontract.ensure(lambda result: result.get("estado") in ("VALIDA", "RECHAZADA", "PENDIENTE"))
+@icontract.ensure(
+    lambda result: _suma_valor_monedas(result.get("monedas_entrada", []))
+    == _suma_valor_monedas(result.get("monedas_salida", []))
+)
+def merge(cartera: dict, monedas_ids: list, valores: list) -> dict:
+    """Operacion MERGE: fusiona multiples monedas en una sola."""
+    valor_total = sum(valores)
+    nuevo_id = f"GH-{uuid.uuid4().hex[:8].upper()}"
+    monedas_entrada = [{"id": m_id, "valor": val} for m_id, val in zip(monedas_ids, valores)]
+    return {
+        "tipo": "MERGE",
+        "origen": cartera.get("clave_publica", ""),
+        "monedas_entrada": monedas_entrada,
+        "monedas_salida": [{"id": nuevo_id, "valor": valor_total}],
+        "estado": "VALIDA",
+    }
 
 
 @icontract.require(lambda transaccion: isinstance(transaccion, dict))

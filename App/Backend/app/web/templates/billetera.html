@@ -93,6 +93,10 @@
                   </form>
                 </div>
 
+                <button type="button" class="btn-secondary" onclick="verMonedas('{{ wallet.id }}', this)" style="margin-top: 8px; width: 100%;">
+                  🪙 Ver Mis Monedas
+                </button>
+
                 <div id="consulta-result-{{ wallet.id }}" style="display: none; margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 12.5px;"></div>
               </div>
             {% endfor %}
@@ -110,6 +114,44 @@
               </form>
             </div>
           </div>
+
+        <!-- PANEL VISUAL DE MONEDAS -->
+        <div id="panel-monedas" style="display:none; margin-top: 24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="margin:0; color:#1b5e20;">🪙 Monedas de tu Cartera</h3>
+            <button type="button" onclick="cerrarPanelMonedas()" style="background:none; border:none; font-size:18px; cursor:pointer;">✕</button>
+          </div>
+          <p style="font-size:13px; color:#555; margin-bottom:16px;">
+            Seleccioná <b>1 moneda</b> para fraccionar (Split) o <b>2 o más</b> para fusionar (Merge).
+          </p>
+          <div id="grid-monedas" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;"></div>
+
+          <!-- ACCIONES CONTEXTUALES -->
+          <div id="accion-split" style="display:none; padding:16px; background:#e8f5e9; border-radius:8px; border:1px solid #a5d6a7; margin-bottom:12px;">
+            <h4 style="margin:0 0 10px; color:#1b5e20;">✂️ Fraccionar Moneda</h4>
+            <p style="font-size:13px; color:#555; margin-bottom:10px;">Moneda seleccionada: <strong id="split-moneda-label"></strong></p>
+            <form id="form-split-visual" method="post" action="/split">
+              <input type="hidden" name="csrf_token" value="">
+              <input type="hidden" name="moneda_id" id="split-moneda-id" value="">
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" name="particiones" id="split-particiones" placeholder="Ej: 50, 50" required
+                  style="flex:1; padding:8px 12px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+                <button type="submit" class="btn-primary" style="padding:8px 16px;">Fraccionar</button>
+              </div>
+              <p style="font-size:12px; color:#777; margin-top:6px;">Ingresá los valores en centavos separados por coma. Deben sumar el valor total de la moneda.</p>
+            </form>
+          </div>
+
+          <div id="accion-merge" style="display:none; padding:16px; background:#e3f2fd; border-radius:8px; border:1px solid #90caf9; margin-bottom:12px;">
+            <h4 style="margin:0 0 10px; color:#0d47a1;">🔗 Fusionar Monedas</h4>
+            <p style="font-size:13px; color:#555; margin-bottom:10px;">Monedas seleccionadas: <strong id="merge-count-label">0</strong> — Total: <strong id="merge-total-label">0</strong> ¢</p>
+            <form id="form-merge-visual" method="post" action="/merge">
+              <input type="hidden" name="csrf_token" value="">
+              <div id="merge-inputs-hidden"></div>
+              <button type="submit" class="btn-primary" style="padding:8px 20px;">Fusionar en 1 Moneda</button>
+            </form>
+          </div>
+        </div>
 
           <div class="card">
             <div class="card-head"><h3>Contratos de Seguridad de Multi-Billeteras</h3></div>
@@ -281,5 +323,112 @@
         switchTab('info');
       }
     });
+
+  let monedasActuales = [];
+  let seleccionadas = new Set();
+  let walletActivaId = null;
+
+  function verMonedas(walletId, btn) {
+    walletActivaId = walletId;
+    const panel = document.getElementById('panel-monedas');
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('grid-monedas').innerHTML = '<p style="color:#777;">Cargando monedas...</p>';
+    seleccionadas.clear();
+    actualizarAcciones();
+
+    const formData = new FormData();
+    formData.append('csrf_token', document.querySelector('input[name=csrf_token]').value);
+    formData.append('wallet_id', walletId);
+
+    fetch('/billetera/monedas', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(data => {
+        monedasActuales = data.monedas || [];
+        renderizarMonedas();
+      })
+      .catch(() => {
+        document.getElementById('grid-monedas').innerHTML = '<p style="color:red;">Error al cargar monedas.</p>';
+      });
+  }
+
+  function cerrarPanelMonedas() {
+    document.getElementById('panel-monedas').style.display = 'none';
+    seleccionadas.clear();
+    monedasActuales = [];
+  }
+
+  function renderizarMonedas() {
+    const grid = document.getElementById('grid-monedas');
+    if (monedasActuales.length === 0) {
+      grid.innerHTML = '<p style="color:#777;">Esta cartera no tiene monedas disponibles.</p>';
+      return;
+    }
+    grid.innerHTML = monedasActuales.map(m => `
+      <div onclick="toggleMoneda('${m.id}', ${m.valor})" id="chip-${m.id}"
+        style="cursor:pointer; padding:12px 16px; border-radius:10px; border:2px solid #ccc;
+               background:#fff; min-width:90px; text-align:center; transition:all 0.2s;
+               box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <div style="font-size:11px; color:#888; font-family:monospace;">${m.id}</div>
+        <div style="font-size:18px; font-weight:bold; color:#1b5e20; margin:4px 0;">${m.valor}¢</div>
+        <div style="font-size:11px; color:#aaa;">${(m.valor/100).toFixed(2)} GC</div>
+      </div>
+    `).join('');
+  }
+
+  function toggleMoneda(id, valor) {
+    const chip = document.getElementById('chip-' + id);
+    if (seleccionadas.has(id)) {
+      seleccionadas.delete(id);
+      chip.style.border = '2px solid #ccc';
+      chip.style.background = '#fff';
+    } else {
+      seleccionadas.add(id);
+      chip.style.border = '2px solid #1b5e20';
+      chip.style.background = '#e8f5e9';
+    }
+    actualizarAcciones();
+  }
+
+  function actualizarAcciones() {
+    const splitDiv = document.getElementById('accion-split');
+    const mergeDiv = document.getElementById('accion-merge');
+    const n = seleccionadas.size;
+
+    if (n === 1) {
+      const id = [...seleccionadas][0];
+      const moneda = monedasActuales.find(m => m.id === id);
+      document.getElementById('split-moneda-id').value = id;
+      document.getElementById('split-moneda-label').textContent = id + ' — ' + moneda.valor + '¢';
+      document.querySelector('#form-split-visual input[name=csrf_token]').value =
+        document.querySelector('input[name=csrf_token]').value;
+      splitDiv.style.display = 'block';
+      mergeDiv.style.display = 'none';
+    } else if (n >= 2) {
+      const selArr = [...seleccionadas];
+      const total = selArr.reduce((acc, id) => {
+        const m = monedasActuales.find(x => x.id === id);
+        return acc + (m ? m.valor : 0);
+      }, 0);
+      document.getElementById('merge-count-label').textContent = n;
+      document.getElementById('merge-total-label').textContent = total;
+
+      // Construir hidden inputs para el form de merge
+      const container = document.getElementById('merge-inputs-hidden');
+      container.innerHTML = selArr.map(id => {
+        const m = monedasActuales.find(x => x.id === id);
+        return `<input type="hidden" name="monedas_ids[]" value="${id}">
+                <input type="hidden" name="valores[]" value="${m ? m.valor : 0}">`;
+      }).join('');
+      document.querySelector('#form-merge-visual input[name=csrf_token]').value =
+        document.querySelector('input[name=csrf_token]').value;
+
+      splitDiv.style.display = 'none';
+      mergeDiv.style.display = 'block';
+    } else {
+      splitDiv.style.display = 'none';
+      mergeDiv.style.display = 'none';
+    }
+  }
   </script>
 {% endblock %}
