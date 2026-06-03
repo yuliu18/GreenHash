@@ -41,51 +41,31 @@
                 data-action="{{ registro.accion }}"
                 data-details="{{ registro.detalle }}"
                 data-date="{{ registro.fecha }}"
-                data-status="OK"
-                data-mitigation="Se aplicó firma digital criptográfica de no-repudio y validación de estado centralizado (UML-S DSM 1/3) para mitigar la suplantación de identidad (Spoofing) y manipulación de datos (Tampering).">
+                data-status="{% if 'ATTEMPT' in registro.accion %}BLOQUEADO{% else %}OK{% endif %}"
+                data-mitigation="{% if registro.accion == 'SQLi_ATTEMPT' %}UML-S DSM 4 (Privacidad en Bases de Datos): Consultas parametrizadas utilizando marcadores de posición (%s) para aislar la lógica SQL de las entradas de los usuarios, bloqueando la exfiltración o volcado de tablas.{% elif registro.accion == 'XSS_ATTEMPT' %}UML-S DSM 1 (Web App): Cookies de sesión configuradas con las flags HttpOnly, Secure y SameSite=Lax. Se realiza codificación HTML de caracteres especiales (escapado en Jinja2) para neutralizar cualquier script inyectado.{% else %}Se aplicó firma digital criptográfica de no-repudio y validación de estado centralizado (UML-S DSM 1/3) para mitigar la suplantación de identidad (Spoofing) y manipulación de datos (Tampering).{% endif %}">
               <td><b>{{ registro.usuario if registro.usuario else 'Sistema/Invitado' }}</b></td>
               <td>
                 <span class="pill" style="border: none; padding: 2px 8px; font-weight: 600; font-size: 11px; text-transform: uppercase;
-                                       background-color: {% if registro.accion == 'Transferencia' %}#e8f0fe{% elif registro.accion == 'Compra' %}#fbf0f0{% elif 'Carga' in registro.accion %}#eaf6ed{% else %}#e8f5e9{% endif %};
-                                       color: {% if registro.accion == 'Transferencia' %}#1976d2{% elif registro.accion == 'Compra' %}#d32f2f{% elif 'Carga' in registro.accion %}#2e7d32{% else %}#2e7d32{% endif %};">
+                                       background-color: {% if registro.accion == 'SQLi_ATTEMPT' %}#fdecea{% elif registro.accion == 'XSS_ATTEMPT' %}#fff4e5{% elif registro.accion == 'Transferencia' %}#e8f0fe{% elif registro.accion == 'Compra' %}#fbf0f0{% elif 'Carga' in registro.accion %}#eaf6ed{% else %}#e8f5e9{% endif %};
+                                       color: {% if registro.accion == 'SQLi_ATTEMPT' %}#d32f2f{% elif registro.accion == 'XSS_ATTEMPT' %}#f57c00{% elif registro.accion == 'Transferencia' %}#1976d2{% elif registro.accion == 'Compra' %}#d32f2f{% elif 'Carga' in registro.accion %}#2e7d32{% else %}#2e7d32{% endif %};">
                   {{ registro.accion }}
                 </span>
               </td>
               <td>{{ registro.detalle }}</td>
               <td class="muted">{{ registro.fecha }}</td>
-              <td class="ta-r"><span class="pill ok">OK</span></td>
+              <td class="ta-r">
+                {% if 'ATTEMPT' in registro.accion %}
+                  <span class="pill" style="background-color: #fee; color: #d32f2f; border: none;">BLOQUEADO</span>
+                {% else %}
+                  <span class="pill ok">OK</span>
+                {% endif %}
+              </td>
             </tr>
           {% else %}
             <tr><td colspan="5" class="empty">No hay registros de auditoría en la base de datos.</td></tr>
           {% endfor %}
           
-          <!-- Mitigated attack mock logs -->
-          <tr class="audit-row" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fdf4f4'" onmouseout="this.style.backgroundColor='transparent'"
-              data-user="Invitado"
-              data-action="SQLi_ATTEMPT"
-              data-details='Intento de inyección de código SQL malicioso detectado en el campo de inicio de sesión de correo: "admin OR 1=1 --". La entrada fue sanitizada mediante consultas parametrizadas.'
-              data-date="{{ sqli_time }}"
-              data-status="BLOQUEADO"
-              data-mitigation="UML-S DSM 4 (Privacidad en Bases de Datos): Consultas parametrizadas utilizando marcadores de posición (%s) para aislar la lógica SQL de las entradas de los usuarios, bloqueando la exfiltración o volcado de tablas.">
-            <td><b>Invitado</b></td>
-            <td><span class="pill" style="border: none; padding: 2px 8px; font-weight: 600; font-size: 11px; background-color: #fdecea; color: #d32f2f;">SQLi_ATTEMPT</span></td>
-            <td>Inyección SQL detectada en campo de correo: "admin' OR 1=1 --". Petición sanitizada y bloqueada.</td>
-            <td class="muted">{{ sqli_time }}</td>
-            <td class="ta-r"><span class="pill" style="background-color: #fee; color: #d32f2f; border: none;">BLOQUEADO</span></td>
-          </tr>
-          <tr class="audit-row" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#fdf4f4'" onmouseout="this.style.backgroundColor='transparent'"
-              data-user="Invitado"
-              data-action="XSS_ATTEMPT"
-              data-details="Intento de inyección de script HTML (&lt;script&gt;) en el formulario de soporte/configuración. El WAF detectó y filtró los caracteres especiales antes de guardarlos en el servidor."
-              data-date="{{ xss_time }}"
-              data-status="FILTRADO"
-              data-mitigation="UML-S DSM 1 (Web App): Cookies de sesión configuradas con las flags HttpOnly, Secure y SameSite=Lax. Se realiza codificación HTML de caracteres especiales (escapado en Jinja2) para neutralizar cualquier script inyectado.">
-            <td><b>Invitado</b></td>
-            <td><span class="pill" style="border: none; padding: 2px 8px; font-weight: 600; font-size: 11px; background-color: #fff4e5; color: #f57c00;">XSS_ATTEMPT</span></td>
-            <td>Inyección de script de comandos HTML &lt;script&gt; en formulario de soporte. Entrada filtrada.</td>
-            <td class="muted">{{ xss_time }}</td>
-            <td class="ta-r"><span class="pill" style="background-color: #fff4e5; color: #f57c00; border: none;">FILTRADO</span></td>
-          </tr>
+          <!-- Los logs de ataque simulados en dura ya no son necesarios, ya que ahora se registran de forma real y dinamica -->
         </tbody>
       </table>
     </div>
