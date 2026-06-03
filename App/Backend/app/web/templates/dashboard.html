@@ -15,8 +15,8 @@
             <span style="font-size: 14px; color: var(--ink-2); font-weight: 500;">GreenCoins en Circulación</span>
             {{ macros.icon('coin', size=22) }}
           </div>
-          <div style="font-size: 28px; font-weight: 700; margin-top: 10px; color: var(--g-800);">62.5 GC</div>
-          <div style="font-size: 12px; color: var(--g-700); margin-top: 4px;">+4.2 GC esta semana</div>
+          <div style="font-size: 28px; font-weight: 700; margin-top: 10px; color: var(--g-800);">{{ "%.2f"|format(total_circulacion) }} GC</div>
+          <div style="font-size: 12px; color: var(--g-700); margin-top: 4px;">Monedas activas en base de datos</div>
         </div>
 
         <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
@@ -24,7 +24,7 @@
             <span style="font-size: 14px; color: var(--ink-2); font-weight: 500;">Kilogramos Reciclados</span>
             {{ macros.icon('recycle', size=22) }}
           </div>
-          <div style="font-size: 28px; font-weight: 700; margin-top: 10px; color: var(--g-800);">420 kg</div>
+          <div style="font-size: 28px; font-weight: 700; margin-top: 10px; color: var(--g-800);">{{ "%.0f"|format(reciclaje_kg) }} kg</div>
           <div style="font-size: 12px; color: var(--g-700); margin-top: 4px;">8 Puntos autorizados activos</div>
         </div>
 
@@ -33,7 +33,7 @@
             <span style="font-size: 14px; color: var(--ink-2); font-weight: 500;">Alertas de Seguridad WAF</span>
             {{ macros.icon('bell', size=22) }}
           </div>
-          <div style="font-size: 28px; font-weight: 700; margin-top: 10px; color: var(--neg);">2 Activas</div>
+          <div style="font-size: 28px; font-weight: 700; margin-top: 10px; color: var(--neg);">{{ alertas_count }} Activas</div>
           <div style="font-size: 12px; color: var(--neg); margin-top: 4px;">WAF y SSL activos</div>
         </div>
       </div>
@@ -44,18 +44,22 @@
           <table class="mini-table">
             <thead><tr><th>Fecha</th><th>Tipo</th><th>Acción</th><th>Detalles</th></tr></thead>
             <tbody>
-              <tr>
-                <td class="muted" style="white-space: nowrap;">30/05/2026 22:28</td>
-                <td><span class="pill soft Purchase" style="color: var(--neg); background-color: #fee; text-transform: uppercase; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px;">CRÍTICO</span></td>
-                <td><b>SECURITY_BLOCKED</b></td>
-                <td>Ataque SQL Injection bloqueado de IP 192.168.1.100 en campo de correo.</td>
-              </tr>
-              <tr>
-                <td class="muted" style="white-space: nowrap;">30/05/2026 22:20</td>
-                <td><span class="pill soft Transfer" style="color: #f57c00; background-color: #fff4e5; text-transform: uppercase; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px;">WARN</span></td>
-                <td><b>SECURITY_ALERT</b></td>
-                <td>Filtro XSS bloqueó entrada de script malicioso en campo comentario.</td>
-              </tr>
+              {% for alert in recent_alerts %}
+                <tr>
+                  <td class="muted" style="white-space: nowrap;">{{ alert.fecha }}</td>
+                  <td>
+                    <span class="pill" style="border: none; padding: 2px 8px; font-weight: 600; font-size: 11px; text-transform: uppercase;
+                                           background-color: {% if alert.tipo == 'CRÍTICO' %}#fdecea{% else %}#fff4e5{% endif %};
+                                           color: {% if alert.tipo == 'CRÍTICO' %}#d32f2f{% else %}#f57c00{% endif %};">
+                      {{ alert.tipo }}
+                    </span>
+                  </td>
+                  <td><b>{{ alert.accion }}</b></td>
+                  <td>{{ alert.detalle }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4" class="empty" style="text-align: center; padding: 20px; color: #888;">No se han detectado intentos de ataque en las últimas horas (WAF OK).</td></tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>

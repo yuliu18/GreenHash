@@ -119,10 +119,55 @@ def index():
 @web_bp.get("/dashboard")
 @requiere_rol("usuario")
 def dashboard():
+    from app.auth.session import obtener_rol
     current_user, saldo_actual, clave_publica = get_current_user_wallet_details()
     transacciones = []
     
-    if clave_publica:
+    # Datos para el dashboard del admin
+    total_circulacion = 0.0
+    reciclaje_kg = 420.0
+    alertas_count = 0
+    recent_alerts = []
+    
+    rol = obtener_rol()
+    if rol == "admin":
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    # 1. Total en circulación (suma de todos los saldos en wallets en GC)
+                    cur.execute("SELECT SUM(saldo) as total FROM wallets")
+                    row_total = cur.fetchone()
+                    if row_total and row_total["total"]:
+                        total_circulacion = float(row_total["total"]) / 100.0
+                        
+                    # 2. Cantidad de alertas del WAF (SQLi / XSS / Brute Force)
+                    cur.execute(
+                        "SELECT COUNT(*) as cnt FROM auditoria "
+                        "WHERE operacion IN ('SQLi_ATTEMPT', 'XSS_ATTEMPT', 'BRUTE_FORCE_ATTEMPT')"
+                    )
+                    row_alerts = cur.fetchone()
+                    if row_alerts:
+                        alertas_count = int(row_alerts["cnt"])
+                        
+                    # 3. Traer los últimos 4 ataques o incidentes mitigados
+                    cur.execute(
+                        "SELECT operacion, detalles, creado_en FROM auditoria "
+                        "WHERE operacion IN ('SQLi_ATTEMPT', 'XSS_ATTEMPT', 'BRUTE_FORCE_ATTEMPT') "
+                        "ORDER BY creado_en DESC LIMIT 4"
+                    )
+                    rows_recent = cur.fetchall()
+                    for r in rows_recent:
+                        date_str = r["creado_en"].strftime("%d/%m/%Y %H:%M") if r["creado_en"] else "N/A"
+                        recent_alerts.append({
+                            "tipo": "CRÍTICO" if r["operacion"] == "SQLi_ATTEMPT" else "WARN",
+                            "accion": r["operacion"],
+                            "detalle": r["detalles"],
+                            "fecha": date_str
+                        })
+        except Exception:
+            pass
+            
+    if clave_publica and rol != "admin":
         try:
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
@@ -137,11 +182,6 @@ def dashboard():
                     for r in rows:
                         is_sender = (r["origen"] == clave_publica)
                         try:
-                            # Para recompensas se muestra el neto (monedas_salida).
-                            # Para compras se muestra el costo (monedas_entrada).
-                            # Para transferencias:
-                            # - Si eres emisor (sender), tu costo es monedas_entrada (monto + impuesto).
-                            # - Si eres receptor (receiver), tu ganancia neta es monedas_salida (monto).
                             tipo_upper = r["tipo"].upper()
                             if tipo_upper == "RECOMPENSA":
                                 campo_monedas = "monedas_salida"
@@ -161,6 +201,12 @@ def dashboard():
                         elif tipo_upper == "RECOMPENSA":
                             desc = "Recompensa por reciclaje"
                             amount = val
+                        elif tipo_upper == "SPLIT":
+                            desc = f"Fraccionamiento (Split) de {r['destino']}"
+                            amount = 0.0
+                        elif tipo_upper == "MERGE":
+                            desc = "Fusión (Merge) de monedas"
+                            amount = 0.0
                         else:
                             if is_sender:
                                 desc = f"Enviado a {r['destino']}"
@@ -184,6 +230,10 @@ def dashboard():
         saldo_actual=saldo_actual,
         transacciones=transacciones,
         current_user=current_user,
+        total_circulacion=total_circulacion,
+        reciclaje_kg=reciclaje_kg,
+        alertas_count=alertas_count,
+        recent_alerts=recent_alerts
     )
 
 
