@@ -93,10 +93,6 @@
                   </form>
                 </div>
 
-                <button type="button" class="btn-secondary" onclick="verMonedas('{{ wallet.id }}', this)" style="margin-top: 8px; width: 100%;">
-                  🪙 Ver Mis Monedas
-                </button>
-
                 <div id="consulta-result-{{ wallet.id }}" style="display: none; margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 12.5px;"></div>
               </div>
             {% endfor %}
@@ -139,9 +135,9 @@
             <div class="card-head"><h3>Fraccionar GreenCoins</h3></div>
             <p class="muted" style="margin-bottom: 16px;">Seleccioná una moneda de tu cartera y dividila en partes más pequeñas.</p>
 
-            <!-- Grid de monedas para Split -->
+            <!-- Grid de monedas para Split — se carga automáticamente al entrar al tab -->
             <div id="grid-monedas-split" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
-              <p style="color:#aaa; font-size:13px;">Hacé clic en "Ver Mis Monedas" desde el tab <b>Mis Carteras</b> para cargar tus monedas aquí.</p>
+              <p style="color:#aaa; font-size:13px;">Cargando monedas...</p>
             </div>
 
             <!-- Acción Split contextual -->
@@ -161,11 +157,7 @@
               </form>
             </div>
 
-            <!-- Resultado visual del Split -->
-            <div id="resultado-split" style="display:none; margin-top:8px;">
-              <h4 style="color:#1b5e20; margin-bottom:10px;">✅ Monedas resultantes</h4>
-              <div id="grid-resultado-split" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
-            </div>
+            <!-- Resultado: toast emergente (ver JS) -->
           </div>
 
           <div class="card">
@@ -186,9 +178,9 @@
             <div class="card-head"><h3>Fusionar GreenCoins</h3></div>
             <p class="muted" style="margin-bottom: 16px;">Seleccioná 2 o más monedas de tu cartera y combinalas en una sola.</p>
 
-            <!-- Grid de monedas para Merge -->
+            <!-- Grid de monedas para Merge — se carga automáticamente al entrar al tab -->
             <div id="grid-monedas-merge" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
-              <p style="color:#aaa; font-size:13px;">Hacé clic en "Ver Mis Monedas" desde el tab <b>Mis Carteras</b> para cargar tus monedas aquí.</p>
+              <p style="color:#aaa; font-size:13px;">Cargando monedas...</p>
             </div>
 
             <!-- Acción Merge contextual -->
@@ -204,11 +196,7 @@
               </form>
             </div>
 
-            <!-- Resultado visual del Merge -->
-            <div id="resultado-merge" style="display:none; margin-top:8px;">
-              <h4 style="color:#0d47a1; margin-bottom:10px;">✅ Moneda resultante</h4>
-              <div id="grid-resultado-merge" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
-            </div>
+            <!-- Resultado: toast emergente (ver JS) -->
           </div>
 
           <div class="card">
@@ -227,15 +215,35 @@
     </div>
   </div>
 
+  <!-- Toast modal emergente de resultado -->
+  <div id="toast-resultado" style="
+    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:#fff; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,0.18);
+    padding:32px 36px; z-index:9999; min-width:320px; max-width:480px; text-align:center;">
+    <div id="toast-icono" style="font-size:40px; margin-bottom:12px;"></div>
+    <h3 id="toast-titulo" style="margin:0 0 8px; color:#1b5e20; font-size:18px;"></h3>
+    <p id="toast-subtitulo" style="color:#555; font-size:13px; margin-bottom:20px;"></p>
+    <div id="toast-monedas" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:20px;"></div>
+    <button onclick="cerrarToast()" style="padding:8px 28px; background:#2e7d32; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer;">Entendido</button>
+  </div>
+  <div id="toast-backdrop" onclick="cerrarToast()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:9998;"></div>
+
   <script>
     // Sistema de Tabs (Info / Split / Merge)
     function switchTab(tabId) {
       const contents = document.querySelectorAll(".tab-content");
       contents.forEach(el => el.style.display = "none");
-      
+
       const activeContent = document.getElementById("tab-content-" + tabId);
       if (activeContent) {
         activeContent.style.display = "contents";
+      }
+
+      // Cargar monedas automáticamente al entrar a Split o Merge
+      if ((tabId === 'split' || tabId === 'merge') && walletActivaId) {
+        renderizarEnTabs();
+      } else if ((tabId === 'split' || tabId === 'merge') && monedasActuales.length === 0) {
+        cargarMonedasPrimeraWallet();
       }
 
       const buttons = document.querySelectorAll(".role-selector button");
@@ -457,10 +465,45 @@
     if (div) div.style.display = 'none';
   }
 
+  // Carga automática desde la primera wallet disponible
+  function cargarMonedasPrimeraWallet() {
+    const primerWalletId = {{ wallets_list[0].id if wallets_list else 'null' }};
+    if (!primerWalletId) return;
+    walletActivaId = String(primerWalletId);
+    cargarMonedas(walletActivaId);
+  }
+
+  // Toast emergente de resultado
+  function mostrarToast(tipo, monedas) {
+    const esplit = tipo === 'split';
+    document.getElementById('toast-icono').textContent = esplit ? '✂️' : '🔗';
+    document.getElementById('toast-titulo').textContent = esplit ? '¡Fraccionamiento exitoso!' : '¡Fusión exitosa!';
+    document.getElementById('toast-subtitulo').textContent = esplit
+      ? `La moneda fue dividida en ${monedas.length} parte${monedas.length > 1 ? 's' : ''}.`
+      : `Las monedas fueron fusionadas en una sola.`;
+    document.getElementById('toast-monedas').innerHTML = monedas.map(m => `
+      <div style="padding:10px 14px; border-radius:10px; border:2px solid #a5d6a7;
+                  background:#f1f8e9; min-width:90px; text-align:center;">
+        <div style="font-size:10px; color:#888; font-family:monospace;">${m.id}</div>
+        <div style="font-size:16px; font-weight:bold; color:#1b5e20;">${(m.valor/100).toFixed(2)} GC</div>
+      </div>`).join('');
+    document.getElementById('toast-resultado').style.display = 'block';
+    document.getElementById('toast-backdrop').style.display = 'block';
+    // Auto-cierre a los 6 segundos
+    setTimeout(cerrarToast, 6000);
+  }
+
+  function cerrarToast() {
+    document.getElementById('toast-resultado').style.display = 'none';
+    document.getElementById('toast-backdrop').style.display = 'none';
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    // Restaurar monedas desde sessionStorage si existen
+    // Restaurar o cargar monedas automáticamente
     if (monedasActuales.length > 0) {
-      renderizarEnTabs();
+      renderizarEnTabs();  // sessionStorage disponible
+    } else {
+      cargarMonedasPrimeraWallet();  // primera carga
     }
 
     const formSplit = document.getElementById('form-split-visual');
@@ -501,17 +544,12 @@
         fetch('/split', { method: 'POST', body, redirect: 'manual' })
           .then(() => {
             ocultarErrorSplit();
-            // Mostrar resultado en GC (centavos ya calculados)
-            const resDiv = document.getElementById('resultado-split');
-            const resGrid = document.getElementById('grid-resultado-split');
-            resDiv.style.display = 'block';
-            resGrid.innerHTML = partesCentavos.map((v, i) => chipHTML(
-              { id: monedaId + '-P' + (i+1), valor: v }, false, 'res'
-            )).join('');
-
+            // Construir monedas hijas y mostrar toast
+            const monedas_hijas = partesCentavos.map((v, i) => ({ id: monedaId + '-P' + (i+1), valor: v }));
+            mostrarToast('split', monedas_hijas);
             // Actualizar estado y persistir
             monedasActuales = monedasActuales.filter(m => m.id !== monedaId);
-            partesCentavos.forEach((v, i) => monedasActuales.push({ id: monedaId + '-P' + (i+1), valor: v }));
+            monedas_hijas.forEach(m => monedasActuales.push(m));
             guardarEstado();
             seleccionadas.clear();
             renderizarEnTabs();
@@ -539,16 +577,12 @@
         fetch('/merge', { method: 'POST', body: new URLSearchParams(formData), redirect: 'manual' })
           .then(() => {
             const nuevoId = 'GH-' + Math.random().toString(16).slice(2, 6).toUpperCase();
-
-            // Mostrar resultado visual
-            const resDiv = document.getElementById('resultado-merge');
-            const resGrid = document.getElementById('grid-resultado-merge');
-            resDiv.style.display = 'block';
-            resGrid.innerHTML = chipHTML({ id: nuevoId, valor: totalValor }, false, 'res');
-
+            const moneda_nueva = { id: nuevoId, valor: totalValor };
+            // Mostrar toast
+            mostrarToast('merge', [moneda_nueva]);
             // Actualizar estado de monedas y persistir
             monedasActuales = monedasActuales.filter(m => !selArr.includes(m.id));
-            monedasActuales.push({ id: nuevoId, valor: totalValor });
+            monedasActuales.push(moneda_nueva);
             guardarEstado();
             seleccionadas.clear();
             renderizarEnTabs();
