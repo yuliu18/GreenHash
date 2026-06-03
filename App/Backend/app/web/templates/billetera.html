@@ -64,8 +64,8 @@
             {% for wallet in wallets_list %}
               <div class="card" style="border-left: 5px solid #2e7d32; position: relative;">
                 <div class="card-head" style="display: flex; justify-content: space-between; align-items: center;">
-                  <h3>Cartera Activa #{{ wallet.id }}</h3>
-                  <span style="font-size: 12px; font-weight: bold; background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px;">{{ wallet.saldo }} GC</span>
+                  <h3>Cartera Activa #{{ loop.index }}</h3>
+                  <span style="font-size: 12px; font-weight: bold; background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px;">{{ "%.2f"|format(wallet.saldo / 100) }} GC</span>
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 12px; margin: 15px 0 20px;">
@@ -75,7 +75,7 @@
                   </div>
                   <div>
                     <span class="muted" style="display: block; margin-bottom: 5px; font-size: 13px;">Dirección Pública (PEM):</span>
-                    <textarea readonly style="width: 100%; height: 60px; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; border: 1px solid #ddd; background-color: #f9f9f9; resize: none;">{{ wallet.clave_publica }}</textarea>
+                    <textarea readonly style="width: 100%; height: 60px; font-family: monospace; font-size: 11px; padding: 8px; border-radius: 6px; border: 1px solid #ddd; background-color: #f9f9f9; resize: none;">{{ wallet.clave_publica.replace('\\n', '\n') }}</textarea>
                   </div>
                 </div>
 
