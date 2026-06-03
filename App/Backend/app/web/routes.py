@@ -910,12 +910,15 @@ def control_billeteras():
                     "ORDER BY u.nombre_completo"
                 )
                 wallet_rows = cur.fetchall()
+                import hashlib as _hlw
                 for wr in wallet_rows:
+                    pk = wr["clave_publica"] or ""
                     wallets_list.append({
                         "id": wr["wallet_id"],
                         "usuario": wr["usuario"],
                         "email": wr["email"],
-                        "clave_publica": wr["clave_publica"],
+                        "clave_publica": pk,
+                        "pk_alias": "PK-" + _hlw.sha256(pk.encode()).hexdigest()[:6].upper(),
                         "saldo": float(wr["saldo"]),
                         "estado": wr["estado"]
                     })

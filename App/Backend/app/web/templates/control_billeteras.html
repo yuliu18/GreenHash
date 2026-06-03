@@ -38,10 +38,10 @@
             <tr>
               <td><b>{{ w.usuario }}</b></td>
               <td class="muted">{{ w.email }}</td>
-              <td class="mono" style="font-size: 11px; color: #666666; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ w.clave_publica }}">
-                {{ w.clave_publica }}
+              <td class="mono" style="font-size: 12px; color: #2e7d32; font-weight: 600;">
+                {{ w.pk_alias }}
               </td>
-              <td class="ta-r"><b id="balance-w{{ w.id }}" style="color: #2e7d32; font-size: 13.5px;">{{ w.saldo }} GC</b></td>
+              <td class="ta-r"><b id="balance-w{{ w.id }}" style="color: #2e7d32; font-size: 13.5px;">{{ "%.2f"|format(w.saldo / 100) }} GC</b></td>
               <td class="ta-c">
                 {% if w.estado == 'CONGELADA' %}
                   <span id="state-w{{ w.id }}" class="pill bad" style="background-color: #fee; color: #d32f2f;">CONGELADA</span>
@@ -107,7 +107,7 @@
           alertDiv.style.border = '1px solid #c8e6c9';
           
           // Update user balance cell in the DOM instantly
-          document.getElementById('balance-w' + data.wallet_id).innerText = parseFloat(data.nuevo_saldo).toFixed(1) + ' GC';
+          document.getElementById('balance-w' + data.wallet_id).innerText = (parseFloat(data.nuevo_saldo) / 100).toFixed(2) + ' GC';
           
           // Reset numeric input
           form.querySelector('input[name="monto"]').value = '';
