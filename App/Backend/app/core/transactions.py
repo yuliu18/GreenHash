@@ -104,15 +104,39 @@ def split(cartera: dict, moneda_id: str, particiones: list) -> dict:
 )
 def merge(cartera: dict, monedas_ids: list, valores: list) -> dict:
     """Operacion MERGE: fusiona multiples monedas en una sola."""
+
+    if not isinstance(cartera, dict):
+        raise Exception()
+
+    if not isinstance(monedas_ids, list) or not isinstance(valores, list):
+        raise Exception()
+
+    if len(monedas_ids) != len(valores):
+        raise Exception()
+
+    if any(v <= 0 for v in valores):
+        raise Exception()
+
     valor_total = sum(valores)
+
     nuevo_id = f"GH-{uuid.uuid4().hex[:8].upper()}"
-    monedas_entrada = [{"id": m_id, "valor": val} for m_id, val in zip(monedas_ids, valores)]
+
+    monedas_entrada = [
+        {"valor": val} for val in valores
+    ]
+
+    moneda_salida = {
+        "valor": valor_total
+    }
+
     return {
         "tipo": "MERGE",
         "origen": cartera.get("clave_publica", ""),
         "monedas_entrada": monedas_entrada,
-        "monedas_salida": [{"id": nuevo_id, "valor": valor_total}],
+        "monedas_salida": [moneda_salida],
         "estado": "VALIDA",
+        "moneda_id": nuevo_id,
+        "valor": valor_total
     }
 
 
