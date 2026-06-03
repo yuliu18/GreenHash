@@ -1296,7 +1296,9 @@ def billetera_crear():
                 )
             conn.commit()
         
-        registrar_operacion_auditoria(user_id, "Crear Billetera", f"Se creó billetera con clave pública EC-SECP256R1 {clave_publica[:28]}...")
+        import hashlib as _hl
+        pk_alias = "PK-" + _hl.sha256(clave_publica.encode()).hexdigest()[:6].upper()
+        registrar_operacion_auditoria(user_id, "Crear Billetera", f"Nueva billetera EC-SECP256R1 creada | ID: {pk_alias}")
         flash(f"¡Billetera creada con éxito! Clave pública (EC-SECP256R1): {clave_publica[:40]}...", "success")
     except NotImplementedError:
         flash("'crear_cartera()' no está implementada todavía.", "warning")

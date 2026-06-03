@@ -101,38 +101,61 @@ def auditar(func: Callable) -> Callable:
     return wrapper
 
 
+def _alias_clave(clave: str) -> str:
+    """Genera un alias corto y no sensible de una clave pública para los logs."""
+    import hashlib
+    if not clave or not isinstance(clave, str):
+        return "desconocido"
+    return "PK-" + hashlib.sha256(clave.encode()).hexdigest()[:6].upper()
+
+
+def _fmt_gc(centavos: int) -> str:
+    """Formatea centavos a GC con 2 decimales."""
+    return f"{centavos / 100:.2f} GC"
+
+
 def _construir_detalles_auditoria(tipo_operacion: str, transaccion: dict) -> str:
-    """Construye string de detalles según tipo de operación para auditoría."""
-    import json
-    
+    """Construye string de detalles legibles para auditoría, sin exponer claves PEM."""
+
     if tipo_operacion == "SPLIT":
         moneda_id = transaccion.get("moneda_id", "N/A")
         monedas_salida = transaccion.get("monedas_salida", [])
-        particiones = [m.get("valor", 0) for m in monedas_salida]
-        valor_total = sum(particiones)
+        n_partes = len(monedas_salida)
+        valor_total = sum(m.get("valor", 0) for m in monedas_salida)
         estado = transaccion.get("estado", "N/A")
-        return f"Moneda: {moneda_id} | Particiones: {particiones} (Total: {valor_total}) | Estado: {estado}"
-    
+        return (f"Moneda {moneda_id} dividida en {n_partes} parte(s) | "
+                f"Total: {_fmt_gc(valor_total)} | Estado: {estado}")
+
+    elif tipo_operacion == "MERGE":
+        monedas_entrada = transaccion.get("monedas_entrada", [])
+        monedas_salida = transaccion.get("monedas_salida", [])
+        n_fusionadas = len(monedas_entrada)
+        valor_total = sum(m.get("valor", 0) for m in monedas_salida)
+        estado = transaccion.get("estado", "N/A")
+        return (f"{n_fusionadas} moneda(s) fusionadas | "
+                f"Resultado: {_fmt_gc(valor_total)} | Estado: {estado}")
+
     elif tipo_operacion in ("TRANSFER", "Transferencia"):
-        monto = transaccion.get("monto", 0)
-        destino = transaccion.get("destino", "N/A")
+        monedas_entrada = transaccion.get("monedas_entrada", [])
+        monedas_salida = transaccion.get("monedas_salida", [])
+        monto_bruto = sum(m.get("valor", 0) for m in monedas_entrada)
+        monto_neto = sum(m.get("valor", 0) for m in monedas_salida)
         impuesto = transaccion.get("impuesto", 0)
-        return f"Monto: {monto} | Impuesto: {impuesto} | Destino: {destino[:20]}..."
-    
-    elif tipo_operacion == "Recompensa":
-        monto_entrada = sum(m.get("valor", 0) for m in transaccion.get("monedas_entrada", []))
+        destino_alias = _alias_clave(transaccion.get("destino", ""))
+        estado = transaccion.get("estado", "N/A")
+        return (f"Enviado: {_fmt_gc(monto_bruto)} → Destino {destino_alias} | "
+                f"Neto: {_fmt_gc(monto_neto)} | Impuesto: {_fmt_gc(impuesto)} | Estado: {estado}")
+
+    elif tipo_operacion in ("RECOMPENSA", "Recompensa"):
+        monedas_salida = transaccion.get("monedas_salida", [])
+        neto = sum(m.get("valor", 0) for m in monedas_salida)
         impuesto = transaccion.get("impuesto", 0)
-        return f"Monto: {monto_entrada} | Impuesto: {impuesto}"
-    
+        estado = transaccion.get("estado", "N/A")
+        return (f"Recompensa acreditada: {_fmt_gc(neto)} | "
+                f"Impuesto retenido: {_fmt_gc(impuesto)} | Estado: {estado}")
+
     else:
-        # Default: intentar serializar detalles relevantes
-        try:
-            resumen = {
-                "tipo": tipo_operacion,
-                "estado": transaccion.get("estado", "N/A"),
-                "entrada": sum(m.get("valor", 0) for m in transaccion.get("monedas_entrada", [])),
-                "salida": sum(m.get("valor", 0) for m in transaccion.get("monedas_salida", []))
-            }
-            return json.dumps(resumen, ensure_ascii=False)
-        except Exception:
-            return "operacion registrada"
+        entrada = sum(m.get("valor", 0) for m in transaccion.get("monedas_entrada", []))
+        salida = sum(m.get("valor", 0) for m in transaccion.get("monedas_salida", []))
+        estado = transaccion.get("estado", "N/A")
+        return f"Entrada: {_fmt_gc(entrada)} | Salida: {_fmt_gc(salida)} | Estado: {estado}"
