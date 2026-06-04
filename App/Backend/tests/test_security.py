@@ -78,3 +78,32 @@ def test_violation_error_propagado(app):
     with app.test_request_context():
         with pytest.raises(icontract.ViolationError):
             operacion_invalida()
+
+
+def test_decorators_firmar_validar_con_session_y_pem(app):
+    par = generar_par_claves()
+    pub_key = par["publica"]
+    priv_key = par["privada"]
+    
+    origen = {
+        "clave_publica": pub_key,
+        "saldo": 1000,
+        "nombre_completo": "Test User"
+    }
+    
+    with app.test_request_context():
+        from flask import session
+        session["usuario_id"] = 1
+        session["rol"] = "usuario"
+        # Test with a trailing newline stripped to simulate session key mismatch
+        session["clave_privada"] = priv_key.strip()
+        
+        @validar
+        @firmar
+        def operacion():
+            from app.core.transactions import transferencia
+            return transferencia(origen, "destino_pub_key", 100)
+            
+        res = operacion()
+        assert "firma" in res
+        assert len(res["firma"]) > 0

@@ -23,13 +23,14 @@ def firmar_transaccion(transaccion: dict, clave_privada: str) -> str:
     """Firma una transaccion con clave privada RSA (PEM) o simulada y devuelve su firma en hex."""
     datos = _obtener_datos_canonicos(transaccion)
     
-    if not clave_privada.strip().startswith("-----BEGIN"):
+    clave_privada_norm = clave_privada.strip().replace("\r\n", "\n").replace("\r", "\n")
+    if not clave_privada_norm.startswith("-----BEGIN"):
         # Fallback de firma simulada (mock) para simplificar pruebas de decoradores
         return hashlib.sha256(datos).hexdigest()
         
     try:
         priv_key = serialization.load_pem_private_key(
-            clave_privada.encode("utf-8"),
+            clave_privada_norm.encode("utf-8"),
             password=None
         )
         
@@ -63,13 +64,14 @@ def verificar_firma(transaccion: dict, clave_publica: str) -> bool:
     datos = _obtener_datos_canonicos(transaccion)
     firma_hex = transaccion.get("firma")
 
-    if clave_publica.strip().startswith("PUB_KEY_STUB_"):
+    clave_publica_norm = clave_publica.strip().replace("\r\n", "\n").replace("\r", "\n")
+    if clave_publica_norm.startswith("PUB_KEY_STUB_"):
         if not firma_hex:
             return False
         firma_esperada = hashlib.sha256(datos).hexdigest()
         return firma_hex == firma_esperada
 
-    if not clave_publica.strip().startswith("-----BEGIN"):
+    if not clave_publica_norm.startswith("-----BEGIN"):
         # Fallback de verificacion simulada (mock) para unit tests simples
         return True
         
@@ -85,7 +87,7 @@ def verificar_firma(transaccion: dict, clave_publica: str) -> bool:
 
     try:
         pub_key = serialization.load_pem_public_key(
-            clave_publica.encode("utf-8")
+            clave_publica_norm.encode("utf-8")
         )
         signature = bytes.fromhex(firma_hex)
         # Detectar tipo de clave y usar el algoritmo correcto

@@ -35,6 +35,35 @@ def requiere_rol(rol_requerido: str) -> Callable:
     return decorator
 
 
+def _clean_pem(pem: str) -> str:
+    if not pem or not isinstance(pem, str):
+        return ""
+    return pem.strip().replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _keys_match(priv_pem: str, pub_pem: str) -> bool:
+    priv_clean = _clean_pem(priv_pem)
+    pub_clean = _clean_pem(pub_pem)
+    
+    if not priv_clean.startswith("-----BEGIN") or not pub_clean.startswith("-----BEGIN"):
+        # Fallback for stubs/mocks
+        return True
+        
+    try:
+        from cryptography.hazmat.primitives import serialization
+        priv_key = serialization.load_pem_private_key(priv_clean.encode("utf-8"), password=None)
+        pub_key = priv_key.public_key()
+        
+        derived_pub_pem = pub_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode("utf-8")
+        
+        return _clean_pem(derived_pub_pem) == pub_clean
+    except Exception:
+        return False
+
+
 def firmar(func: Callable) -> Callable:
     """build -> firmar: agrega firma digital a la transaccion."""
 
@@ -47,24 +76,41 @@ def firmar(func: Callable) -> Callable:
             from flask import has_app_context, session
             if has_app_context():
                 clave_publica = transaccion.get("origen", "")
-                if session.get("clave_privada"):
-                    clave_privada = session["clave_privada"]
-                elif session.get(f"priv_key_{clave_publica}"):
-                    clave_privada = session[f"priv_key_{clave_publica}"]
-                else:
+                normalized_pub = _clean_pem(clave_publica)
+                
+                # 1. Check session["clave_privada"] if it matches the transaction's public key
+                sess_priv = session.get("clave_privada")
+                if sess_priv and _keys_match(sess_priv, clave_publica):
+                    clave_privada = sess_priv
+                
+                # 2. Check session[f"priv_key_{clave_publica}"] using format-insensitive lookup
+                if not clave_privada:
+                    for k, v in session.items():
+                        if k.startswith("priv_key_"):
+                            sess_pub_key = k[len("priv_key_"):]
+                            if _clean_pem(sess_pub_key) == normalized_pub:
+                                if _keys_match(v, clave_publica):
+                                    clave_privada = v
+                                    break
+                                    
+                # 3. Check database (matching trimmed/normalized/exact keys)
+                if not clave_privada:
                     from app.db import get_db_connection
                     try:
                         with get_db_connection() as connection:
                             with connection.cursor() as cursor:
                                 cursor.execute(
-                                    "SELECT clave_privada FROM wallets WHERE clave_publica = %s",
-                                    (clave_publica,)
+                                    "SELECT clave_privada FROM wallets "
+                                    "WHERE clave_publica = %s OR TRIM(clave_publica) = %s "
+                                    "OR REPLACE(clave_publica, '\\r\\n', '\\n') = %s",
+                                    (clave_publica, normalized_pub, normalized_pub)
                                 )
                                 row = cursor.fetchone()
                                 if row and row.get("clave_privada"):
                                     clave_privada = row["clave_privada"]
                     except Exception:
                         pass
+                
                 if not clave_privada:
                     raise icontract.ViolationError("No existe una clave privada para realizar la firma digital.")
             else:
