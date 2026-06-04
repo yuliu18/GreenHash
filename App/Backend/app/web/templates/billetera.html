@@ -83,6 +83,9 @@
                   <button class="btn-primary" onclick="consultarSaldoEspecifico('{{ wallet.id }}')" style="flex: 1; background-color: #1976d2; border-color: #1976d2; padding: 8px 12px; font-size: 13px;">
                     {{ macros.icon('eye', size=15) }} &nbsp; Verificar Saldo
                   </button>
+                  <button class="btn-primary" onclick="verMonedas('{{ wallet.id }}')" style="flex: 1; background-color: #2e7d32; border-color: #2e7d32; padding: 8px 12px; font-size: 13px;">
+                    {{ macros.icon('coin', size=15) }} &nbsp; Cargar en Split/Merge
+                  </button>
                   
                   <form method="post" action="{{ url_for('web.billetera_eliminar') }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta billetera permanente?');" style="flex: 1;">
                     <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') or '' }}" />
@@ -243,7 +246,11 @@
       if ((tabId === 'split' || tabId === 'merge') && walletActivaId) {
         cargarMonedas(walletActivaId);
       } else if ((tabId === 'split' || tabId === 'merge') && monedasActuales.length === 0) {
-        cargarMonedasPrimeraWallet();
+        if (walletActivaId) {
+          cargarMonedas(walletActivaId);
+        } else {
+          cargarMonedasPrimeraWallet();
+        }
       }
 
       const buttons = document.querySelectorAll(".role-selector button");
