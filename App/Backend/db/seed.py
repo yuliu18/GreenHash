@@ -65,9 +65,10 @@ def seed_database():
                     # Crear wallet con clave EC-SECP256R1 real y 10.00 GreenCoins (1000 centavos)
                     cartera = crear_cartera(u["nombre"])
                     pub_key = cartera["clave_publica"]
+                    priv_key = cartera["clave_privada"]
                     cursor.execute(
-                        "INSERT INTO wallets (usuario_id, clave_publica, saldo) VALUES (%s, %s, %s)",
-                        (user_id, pub_key, 1000)
+                        "INSERT INTO wallets (usuario_id, clave_publica, clave_privada, saldo) VALUES (%s, %s, %s, %s)",
+                        (user_id, pub_key, priv_key, 1000)
                     )
 
                 # 2. Poblar catalogo

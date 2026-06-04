@@ -42,7 +42,35 @@ def firmar(func: Callable) -> Callable:
     def wrapper(*args: Any, **kwargs: Any):
         try:
             transaccion = func(*args, **kwargs)
-            firma = firmar_transaccion(transaccion, "clave_privada_stub")
+            clave_privada = None
+            
+            from flask import has_app_context, session
+            if has_app_context():
+                clave_publica = transaccion.get("origen", "")
+                if session.get("clave_privada"):
+                    clave_privada = session["clave_privada"]
+                elif session.get(f"priv_key_{clave_publica}"):
+                    clave_privada = session[f"priv_key_{clave_publica}"]
+                else:
+                    from app.db import get_db_connection
+                    try:
+                        with get_db_connection() as connection:
+                            with connection.cursor() as cursor:
+                                cursor.execute(
+                                    "SELECT clave_privada FROM wallets WHERE clave_publica = %s",
+                                    (clave_publica,)
+                                )
+                                row = cursor.fetchone()
+                                if row and row.get("clave_privada"):
+                                    clave_privada = row["clave_privada"]
+                    except Exception:
+                        pass
+                if not clave_privada:
+                    raise icontract.ViolationError("No existe una clave privada para realizar la firma digital.")
+            else:
+                clave_privada = "clave_privada_stub"
+
+            firma = firmar_transaccion(transaccion, clave_privada)
             transaccion["firma"] = firma
             return transaccion
         except icontract.ViolationError as exc:
@@ -63,8 +91,21 @@ def validar(func: Callable) -> Callable:
             transaccion = func(*args, **kwargs)
             if not verificar_firma(transaccion, transaccion.get("origen", "")):
                 raise icontract.ViolationError("Firma invalida")
-            # En los endpoints actuales no hay estado del sistema precargado; se valida firma e impuesto.
-            if not validar_transaccion(transaccion, {}):
+            
+            estado_sistema = {"saldos": {}}
+            from flask import has_app_context
+            if has_app_context():
+                from app.db import get_db_connection
+                try:
+                    with get_db_connection() as connection:
+                        with connection.cursor() as cursor:
+                            cursor.execute("SELECT clave_publica, saldo FROM wallets")
+                            for row in cursor.fetchall():
+                                estado_sistema["saldos"][row["clave_publica"]] = row["saldo"]
+                except Exception:
+                    pass
+
+            if not validar_transaccion(transaccion, estado_sistema):
                 raise icontract.ViolationError("Validacion rechazada")
             return transaccion
         except icontract.ViolationError as exc:

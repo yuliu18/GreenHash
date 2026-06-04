@@ -31,6 +31,14 @@ def _suma_valor_monedas(monedas: list) -> int:
 )
 def transferencia(origen: dict, destino_clave_publica: str, monto: int) -> dict:
     """Operacion TRANSFER (Modelo: Receptor paga el impuesto)."""
+    # Comprobaciones directas en el cuerpo
+    if not isinstance(origen, dict):
+        raise TypeError("El origen debe ser un diccionario.")
+    if monto <= 0:
+        raise ValueError("El monto a transferir debe ser un entero positivo.")
+    if not isinstance(destino_clave_publica, str) or not destino_clave_publica.strip():
+        raise ValueError("La clave pública de destino es inválida.")
+
     saldo = origen.get("saldo", 0)
     if saldo < monto:
         raise ValueError(f"Fondos insuficientes: saldo={saldo}, monto requerido={monto}")
@@ -59,28 +67,22 @@ def transferencia(origen: dict, destino_clave_publica: str, monto: int) -> dict:
     == _suma_valor_monedas(result.get("monedas_salida", []))
 )
 def split(cartera: dict, moneda_id: str, particiones: list) -> dict:
-    """Operacion SPLIT: divide una moneda en multiples particiones.
-    
-    Args:
-        cartera: Cartera que contiene la moneda
-        moneda_id: Identificador de la moneda a dividir
-        particiones: Lista de valores enteros positivos a crear
+    """Operacion SPLIT: divide una moneda en multiples particiones."""
+    if not isinstance(cartera, dict):
+        raise TypeError("La cartera debe ser un diccionario.")
+    if not isinstance(particiones, list):
+        raise TypeError("Las particiones deben ser una lista.")
+    if not all(isinstance(p, int) and p > 0 for p in particiones):
+        raise ValueError("Todas las particiones deben ser enteros positivos.")
+    if not isinstance(moneda_id, str) or not moneda_id.strip():
+        raise ValueError("El identificador de moneda es inválido.")
         
-    Returns:
-        Transaccion SPLIT como dict con monedas_entrada y monedas_salida
-        
-    Ejemplo:
-        split(cartera, "m1", [10, 20, 30]) -> {
-            "tipo": "SPLIT",
-            "origen": "clave_publica",
-            "moneda_id": "m1",
-            "monedas_entrada": [{"valor": 60}],
-            "monedas_salida": [{"valor": 10}, {"valor": 20}, {"valor": 30}],
-            "estado": "VALIDA"
-        }
-    """
-    monedas_salida = [{"valor": p} for p in particiones]
     valor_total = sum(particiones)
+    saldo_actual = cartera.get("saldo", 0)
+    if saldo_actual < valor_total:
+        raise ValueError(f"Fondos insuficientes para el split: saldo={saldo_actual}, total requerido={valor_total}")
+
+    monedas_salida = [{"valor": p} for p in particiones]
     
     return {
         "tipo": "SPLIT",
@@ -104,7 +106,22 @@ def split(cartera: dict, moneda_id: str, particiones: list) -> dict:
 )
 def merge(cartera: dict, monedas_ids: list, valores: list) -> dict:
     """Operacion MERGE: fusiona multiples monedas en una sola."""
+    if not isinstance(cartera, dict):
+        raise TypeError("La cartera debe ser un diccionario.")
+    if not isinstance(monedas_ids, list) or not isinstance(valores, list):
+        raise TypeError("Monedas IDs y valores deben ser listas.")
+    if len(monedas_ids) < 2:
+        raise ValueError("Se requieren al menos 2 monedas para fusionar.")
+    if len(monedas_ids) != len(valores):
+        raise ValueError("La lista de monedas IDs y la de valores deben tener la misma longitud.")
+    if not all(isinstance(v, int) and v > 0 for v in valores):
+        raise ValueError("Todos los valores de monedas deben ser enteros positivos.")
+        
     valor_total = sum(valores)
+    saldo_actual = cartera.get("saldo", 0)
+    if saldo_actual < valor_total:
+        raise ValueError(f"Fondos insuficientes para el merge: saldo={saldo_actual}, total requerido={valor_total}")
+
     nuevo_id = f"GH-{uuid.uuid4().hex[:8].upper()}"
     monedas_entrada = [{"id": m_id, "valor": val} for m_id, val in zip(monedas_ids, valores)]
     return {
@@ -202,4 +219,6 @@ def validar_transaccion(transaccion: dict, estado_sistema: dict) -> bool:
 @icontract.ensure(lambda result: isinstance(result, int))
 def calcular_impuestos_transferencia(monto: int) -> int:
     """Calcula la comision o impuesto estatal (2%) retenido sobre el monto."""
+    if monto < 0:
+        raise ValueError("El monto no puede ser negativo.")
     return int(monto * TASA_IMPUESTO)
