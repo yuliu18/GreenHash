@@ -35,7 +35,6 @@ def create_app() -> Flask:
         re.compile(r"'\s*(?:or|and)\s+", re.IGNORECASE),
         re.compile(r"or\s+\d+\s*=\s*\d+", re.IGNORECASE),
         re.compile(r"union\s+select", re.IGNORECASE),
-        re.compile(r"--", re.IGNORECASE),
         re.compile(r"/\*.*?\*/", re.IGNORECASE),
     ]
     XSS_PATTERNS = [
