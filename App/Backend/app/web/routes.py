@@ -278,13 +278,14 @@ def transferir_accion():
             with conn.cursor() as cur:
                 # Buscar por clave exacta, con o sin \n final, o por email/nombre
                 destino_con_newline = destino_input if destino_input.endswith("\n") else destino_input + "\n"
-                destino_sin_newline = destino_input.rstrip("\n")
+                destino_sin_newline = destino_input.strip().replace("\r\n", "\n").replace("\r", "\n")
                 cur.execute(
                     "SELECT w.clave_publica, u.nombre_completo FROM wallets w "
                     "JOIN usuarios u ON w.usuario_id = u.id "
                     "WHERE w.clave_publica = %s OR w.clave_publica = %s OR w.clave_publica = %s "
+                    "OR TRIM(REPLACE(w.clave_publica, '\\r\\n', '\\n')) = %s "
                     "OR u.email = %s OR u.nombre_completo = %s",
-                    (destino_input, destino_con_newline, destino_sin_newline, destino_input, destino_input)
+                    (destino_input, destino_con_newline, destino_sin_newline, destino_sin_newline, destino_input, destino_input)
                 )
                 row = cur.fetchone()
                 if row:
@@ -435,18 +436,30 @@ def split_accion():
         # Persistencia en el ledger inmutable
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # C3: Descontar y acreditar para asegurar consistencia del saldo en centavos
+                # Obtener wallet_id del usuario actual
+                cur.execute("SELECT id FROM wallets WHERE clave_publica = %s AND usuario_id = %s", (clave_publica, obtener_usuario_id()))
+                w_row = cur.fetchone()
+                if not w_row:
+                    flash("No se encontró la billetera activa.", "danger")
+                    return redirect(url_for("web.billetera", tab="split"))
+                wallet_id_actual = w_row["id"]
+
+                # Marcar moneda original como GASTADA
+                cur.execute("UPDATE monedas SET estado = 'GASTADA' WHERE id = %s AND wallet_id = %s", (moneda_id, wallet_id_actual))
+
+                # Insertar monedas hijas activas
+                for moneda_hija in transaccion["monedas_salida"]:
+                    nuevo_id = f"GH-{uuid.uuid4().hex[:8].upper()}"
+                    cur.execute(
+                        "INSERT INTO monedas (id, wallet_id, valor, estado) VALUES (%s, %s, %s, 'ACTIVA')",
+                        (nuevo_id, wallet_id_actual, moneda_hija["valor"])
+                    )
+
+                # Ajustar saldo (split conserva valor, diferencia neta = 0)
                 valor_entrada = sum(m["valor"] for m in transaccion["monedas_entrada"])
                 valor_salida = sum(m["valor"] for m in transaccion["monedas_salida"])
-                cur.execute(
-                    "UPDATE wallets SET saldo = saldo - %s WHERE clave_publica = %s",
-                    (valor_entrada, transaccion["origen"])
-                )
-                cur.execute(
-                    "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
-                    (valor_salida, transaccion["origen"])
-                )
-                
+                cur.execute("UPDATE wallets SET saldo = saldo - %s + %s WHERE id = %s", (valor_entrada, valor_salida, wallet_id_actual))
+
                 timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 cur.execute(
                     "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
@@ -526,18 +539,31 @@ def merge_accion():
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # C3: Descontar y acreditar para asegurar consistencia del saldo en centavos
+                # Obtener wallet_id del usuario actual
+                cur.execute("SELECT id FROM wallets WHERE clave_publica = %s AND usuario_id = %s", (clave_publica, obtener_usuario_id()))
+                w_row = cur.fetchone()
+                if not w_row:
+                    flash("No se encontró la billetera activa.", "danger")
+                    return redirect(url_for("web.billetera", tab="merge"))
+                wallet_id_actual = w_row["id"]
+
+                # Marcar monedas originales como GASTADAS
+                for mid in monedas_ids:
+                    cur.execute("UPDATE monedas SET estado = 'GASTADA' WHERE id = %s AND wallet_id = %s", (mid, wallet_id_actual))
+
+                # Insertar moneda fusionada
+                nueva_moneda = transaccion["monedas_salida"][0]
+                nuevo_id = f"GH-{uuid.uuid4().hex[:8].upper()}"
+                cur.execute(
+                    "INSERT INTO monedas (id, wallet_id, valor, estado) VALUES (%s, %s, %s, 'ACTIVA')",
+                    (nuevo_id, wallet_id_actual, nueva_moneda["valor"])
+                )
+
+                # Ajustar saldo (merge conserva valor, diferencia neta = 0)
                 valor_entrada = sum(m["valor"] for m in transaccion["monedas_entrada"])
                 valor_salida = sum(m["valor"] for m in transaccion["monedas_salida"])
-                cur.execute(
-                    "UPDATE wallets SET saldo = saldo - %s WHERE clave_publica = %s",
-                    (valor_entrada, transaccion["origen"])
-                )
-                cur.execute(
-                    "UPDATE wallets SET saldo = saldo + %s WHERE clave_publica = %s",
-                    (valor_salida, transaccion["origen"])
-                )
-                
+                cur.execute("UPDATE wallets SET saldo = saldo - %s + %s WHERE id = %s", (valor_entrada, valor_salida, wallet_id_actual))
+
                 timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 cur.execute(
                     "INSERT INTO transacciones (tipo, origen, destino, monedas_entrada, monedas_salida, impuesto, timestamp, firma, estado) "
@@ -1299,33 +1325,26 @@ def obtener_monedas_virtuales():
     user_id = obtener_usuario_id()
     wallet_id = request.form.get("wallet_id", "")
 
-    saldo_raw = 0
+    monedas = []
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # Verificar que la wallet pertenece al usuario
                 cur.execute(
-                    "SELECT saldo FROM wallets WHERE id = %s AND usuario_id = %s",
+                    "SELECT id FROM wallets WHERE id = %s AND usuario_id = %s",
                     (wallet_id, user_id)
                 )
-                row = cur.fetchone()
-                if row:
-                    saldo_raw = int(row["saldo"])
+                if not cur.fetchone():
+                    return jsonify({"status": "ok", "monedas": []})
+                # Leer monedas reales activas de la tabla monedas
+                cur.execute(
+                    "SELECT id, valor FROM monedas WHERE wallet_id = %s AND estado = 'ACTIVA' ORDER BY creado_en ASC",
+                    (wallet_id,)
+                )
+                for row in cur.fetchall():
+                    monedas.append({"id": row["id"], "valor": int(row["valor"])})
     except Exception:
         pass
-
-    if saldo_raw <= 0:
-        return jsonify({"status": "ok", "monedas": []})
-
-    monedas = []
-    restante = saldo_raw
-    fragmento = 100  # 1 GC = 100 centavos
-    while restante > 0:
-        valor = min(restante, fragmento)
-        monedas.append({
-            "id": f"GH-{uuid.uuid4().hex[:4].upper()}",
-            "valor": valor
-        })
-        restante -= valor
 
     return jsonify({"status": "ok", "monedas": monedas})
 

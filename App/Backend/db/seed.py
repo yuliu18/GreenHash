@@ -45,6 +45,7 @@ def seed_database():
                 cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
                 cursor.execute("TRUNCATE TABLE auditoria;")
                 cursor.execute("TRUNCATE TABLE transacciones;")
+                cursor.execute("TRUNCATE TABLE monedas;")
                 cursor.execute("TRUNCATE TABLE wallets;")
                 cursor.execute("TRUNCATE TABLE usuarios;")
                 cursor.execute("TRUNCATE TABLE catalogo_recompensas;")
@@ -70,6 +71,16 @@ def seed_database():
                         "INSERT INTO wallets (usuario_id, clave_publica, clave_privada, saldo) VALUES (%s, %s, %s, %s)",
                         (user_id, pub_key, priv_key, 1000)
                     )
+                    new_wallet_id = cursor.lastrowid
+                    
+                    # Crear 10 monedas iniciales de 1.00 GC (100 centavos) cada una
+                    import uuid as _uuid
+                    for _ in range(10):
+                        moneda_id = f"GH-{_uuid.uuid4().hex[:8].upper()}"
+                        cursor.execute(
+                            "INSERT INTO monedas (id, wallet_id, valor, estado) VALUES (%s, %s, %s, 'ACTIVA')",
+                            (moneda_id, new_wallet_id, 100)
+                        )
 
                 # 2. Poblar catalogo
                 for nombre, precio in CATALOGO_DEMO:
