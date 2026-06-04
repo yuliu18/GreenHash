@@ -239,9 +239,9 @@
         activeContent.style.display = "contents";
       }
 
-      // Cargar monedas automáticamente al entrar a Split o Merge
+      // Cargar monedas automáticamente al entrar a Split o Merge (recargando de BD para reflejar saldos nuevos)
       if ((tabId === 'split' || tabId === 'merge') && walletActivaId) {
-        renderizarEnTabs();
+        cargarMonedas(walletActivaId);
       } else if ((tabId === 'split' || tabId === 'merge') && monedasActuales.length === 0) {
         cargarMonedasPrimeraWallet();
       }
